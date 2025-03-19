@@ -29,6 +29,7 @@
     <div class="sidebar">
         <h2>📊 AR Analytics</h2>
         <p>Track user interactions in WebAR.</p>
+        <button onclick="downloadAnalytics()">Download Analytics</button>
     </div>
     
     <div class="content">
@@ -55,58 +56,40 @@
     </div>
     
     <script>
-        google.charts.load('current', {'packages':['geochart']});
-        google.charts.setOnLoadCallback(drawRegionsMap);
-        function drawRegionsMap() {
-            fetch('https://ipapi.co/json/')
-                .then(response => response.json())
-                .then(data => {
-                    let country = data.country_name;
-                    let regionData = [['Country', 'Visitors'], [country, 1]];
-                    var dataTable = google.visualization.arrayToDataTable(regionData);
-                    var options = { colorAxis: {colors: ['#e0f7fa', '#007bff']} };
-                    var chart = new google.visualization.GeoChart(document.getElementById('geo_chart'));
-                    chart.draw(dataTable, options);
-                });
+        let analyticsData = { clicks: 0, buttonClicks: 0, devices: {} };
+        
+        function updateStorage() {
+            localStorage.setItem('analyticsData', JSON.stringify(analyticsData));
         }
         
-        const deviceCtx = document.getElementById('deviceChart').getContext('2d');
-        new Chart(deviceCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Mobile', 'Desktop', 'Tablet'],
-                datasets: [{
-                    data: [55, 35, 10],
-                    backgroundColor: ['#007bff', '#28a745', '#ffc107']
-                }]
-            }
-        });
-        
-        const realTimeCtx = document.getElementById('realTimeUsers').getContext('2d');
-        let realTimeData = { labels: [], datasets: [{ data: [], label: 'Users', borderColor: '#dc3545', fill: false }] };
-        let realTimeChart = new Chart(realTimeCtx, { type: 'line', data: realTimeData, options: { responsive: true } });
-        
-        function updateRealTimeUsers() {
-            let time = new Date().toLocaleTimeString();
-            realTimeData.labels.push(time);
-            realTimeData.datasets[0].data.push(Math.floor(Math.random() * 10) + 1);
-            if (realTimeData.labels.length > 10) {
-                realTimeData.labels.shift();
-                realTimeData.datasets[0].data.shift();
-            }
-            realTimeChart.update();
+        function loadStorage() {
+            let data = localStorage.getItem('analyticsData');
+            if (data) analyticsData = JSON.parse(data);
         }
-        setInterval(updateRealTimeUsers, 5000);
         
         document.addEventListener("click", (e) => {
-            let x = e.pageX - document.getElementById("heatmap").offsetLeft;
-            let y = e.pageY - document.getElementById("heatmap").offsetTop;
-            let dot = document.createElement("div");
-            dot.className = "heat-dot";
-            dot.style.left = `${x}px`;
-            dot.style.top = `${y}px`;
-            document.getElementById("heatmap").appendChild(dot);
+            analyticsData.clicks++;
+            updateStorage();
         });
+        
+        function trackButtonClick(buttonName) {
+            analyticsData.buttonClicks++;
+            updateStorage();
+        }
+        
+        function downloadAnalytics() {
+            let csvContent = "data:text/csv;charset=utf-8," + 
+                "Total Clicks, Button Clicks\n" + 
+                `${analyticsData.clicks},${analyticsData.buttonClicks}`;
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "analytics_data.csv");
+            document.body.appendChild(link);
+            link.click();
+        }
+        
+        loadStorage();
     </script>
 </body>
 </html>
