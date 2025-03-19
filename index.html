@@ -29,9 +29,9 @@
     <div class="sidebar">
         <h2>📊 AR Analytics</h2>
         <p>Track user interactions in WebAR.</p>
-        <button onclick="downloadAnalytics()">Download Analytics</button>
         <p>Total Clicks: <span id="totalClicks">0</span></p>
         <p>Button Clicks: <span id="buttonClicks">0</span></p>
+        <button onclick="downloadAnalytics()">Download Analytics</button>
     </div>
     
     <div class="content">
@@ -59,29 +59,27 @@
     
     <script>
         let analyticsData = { clicks: 0, buttonClicks: 0 };
-        
-        function updateStorage() {
-            localStorage.setItem('analyticsData', JSON.stringify(analyticsData));
+        function updateUI() {
             document.getElementById('totalClicks').innerText = analyticsData.clicks;
             document.getElementById('buttonClicks').innerText = analyticsData.buttonClicks;
         }
-        
+        function updateStorage() {
+            localStorage.setItem('analyticsData', JSON.stringify(analyticsData));
+            updateUI();
+        }
         function loadStorage() {
             let data = localStorage.getItem('analyticsData');
             if (data) analyticsData = JSON.parse(data);
-            updateStorage();
+            updateUI();
         }
-        
-        document.addEventListener("click", (e) => {
+        document.addEventListener("click", () => {
             analyticsData.clicks++;
             updateStorage();
         });
-        
         function trackButtonClick() {
             analyticsData.buttonClicks++;
             updateStorage();
         }
-        
         function downloadAnalytics() {
             let csvContent = "data:text/csv;charset=utf-8,Total Clicks,Button Clicks\n" + `${analyticsData.clicks},${analyticsData.buttonClicks}`;
             let encodedUri = encodeURI(csvContent);
@@ -91,7 +89,6 @@
             document.body.appendChild(link);
             link.click();
         }
-        
         loadStorage();
     </script>
 </body>
