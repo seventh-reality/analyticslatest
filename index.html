@@ -11,7 +11,7 @@
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-YB6FWQS3VP');  // Replace 'YOUR_TRACKING_ID' with your Google Analytics ID
+        gtag('config', 'G-YB6FWQS3VP');  // Replace with your own Google Analytics ID
     </script>
     <!-- End Google Analytics -->
 
@@ -20,6 +20,9 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Heatmap.js -->
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js"></script>
 
     <style>
         .card {
@@ -40,6 +43,15 @@
             text-align: right;
             font-size: 0.9rem;
             color: #999;
+        }
+
+        /* Heatmap container */
+        #heatmap-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin-top: 30px;
+            background-color: #f0f0f0;
         }
     </style>
 </head>
@@ -106,9 +118,12 @@
                 </div>
             </div>
         </div>
+
+        <!-- Heatmap Container -->
+        <div id="heatmap-container"></div>
     </div>
 
-    <!-- JavaScript to Initialize Charts -->
+    <!-- JavaScript to Initialize Charts and Heatmap -->
     <script>
         // Sample Traffic Source Data
         const trafficSourceData = {
@@ -184,6 +199,43 @@
             });
             console.log("Download Button Clicked");
         });
+
+        // Heatmap.js initialization
+        const heatmapInstance = h337.create({
+            container: document.querySelector('#heatmap-container'),
+            maxOpacity: 0.6,
+            radius: 50,
+            blur: 0.90
+        });
+
+        // Add random data points to simulate user clicks for heatmap
+        const generateHeatmapData = () => {
+            let points = [];
+            for (let i = 0; i < 200; i++) {
+                points.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    value: Math.random() * 100
+                });
+            }
+            return points;
+        };
+
+        // Updating the heatmap with simulated data
+        heatmapInstance.setData({
+            max: 100,
+            data: generateHeatmapData()
+        });
+
+        // Real-time Analytics (Update Every 10 Seconds)
+        const updateRealTimeAnalytics = () => {
+            // Simulate data update every 10 seconds (you can replace this with actual data from Google Analytics or backend)
+            document.getElementById('total-visits').innerText = Math.floor(Math.random() * 3000);
+            document.getElementById('bounce-rate').innerText = (Math.random() * 100).toFixed(2) + '%';
+            document.getElementById('conversion-rate').innerText = (Math.random() * 10).toFixed(2) + '%';
+        };
+
+        setInterval(updateRealTimeAnalytics, 10000); // Update data every 10 seconds
     </script>
 </body>
 </html>
