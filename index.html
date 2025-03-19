@@ -3,11 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Website Analytics Dashboard</title>
-    <!-- Tailwind CSS CDN -->
+    <title>4D-CXL Pro Analytics Dashboard</title>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YB6FWQS3VP"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-YB6FWQS3VP');  // Replace 'YOUR_TRACKING_ID' with your Google Analytics ID
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Tailwind CSS (for layout and design) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN -->
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         .card {
             background-color: #ffffff;
@@ -37,7 +50,7 @@
 
         <!-- Dashboard Header -->
         <div class="text-center mb-10">
-            <h1 class="text-3xl font-semibold text-gray-800">Website Analytics Dashboard</h1>
+            <h1 class="text-3xl font-semibold text-gray-800">4D-CXL Pro Analytics Dashboard</h1>
         </div>
 
         <!-- Analytics Grid -->
@@ -70,9 +83,13 @@
             </div>
         </div>
 
+        <!-- Example Button to Track -->
+        <div class="text-center mt-10">
+            <button id="downloadButton" class="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700">Download Now</button>
+        </div>
+
         <!-- Analytics Charts Section -->
         <div class="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
             <!-- Traffic Source Chart -->
             <div class="card">
                 <div class="card-header">Traffic Source Breakdown</div>
@@ -93,7 +110,7 @@
 
     <!-- JavaScript to Initialize Charts -->
     <script>
-        // Example Data for the Traffic Source Pie Chart
+        // Sample Traffic Source Data
         const trafficSourceData = {
             labels: ['Direct', 'Organic Search', 'Referral', 'Social Media'],
             datasets: [{
@@ -102,7 +119,7 @@
             }]
         };
 
-        // Example Data for the User Engagement Line Chart
+        // Sample User Engagement Data
         const engagementData = {
             labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
             datasets: [{
@@ -156,6 +173,16 @@
                     }
                 },
             }
+        });
+
+        // Track Button Click Event for Analytics
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            // Google Analytics Event Tracking
+            gtag('event', 'download_button_click', {
+                'event_category': 'user_interaction',
+                'event_label': 'Download Now Button',
+            });
+            console.log("Download Button Clicked");
         });
     </script>
 </body>
