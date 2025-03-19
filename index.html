@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        canvas {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .chart-container {
+            width: 45%;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📊 AR Analytics Dashboard</h1>
+    <p>Track user activity, device stats, and real-time data.</p>
+
+    <div class="container">
+        <div class="chart-container">
+            <h3>📍 Visitor Locations</h3>
+            <div id="geo_chart" style="width: 600px; height: 400px;"></div>
+        </div>
+
+        <div class="chart-container">
+            <h3>📱 Device & Browser Usage</h3>
+            <canvas id="deviceChart"></canvas>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="chart-container">
+            <h3>📊 Real-Time Users</h3>
+            <canvas id="realTimeUsers"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3>📜 Page Views</h3>
+            <canvas id="pageViewsChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Load Google Charts for Geo-location tracking
+        google.charts.load('current', {'packages':['geochart']});
+        google.charts.setOnLoadCallback(drawRegionsMap);
+
+        function drawRegionsMap() {
+            fetch('https://ipapi.co/json/')
+                .then(response => response.json())
+                .then(data => {
+                    let country = data.country_name;
+                    let regionData = [['Country', 'Visitors'], [country, 1]];
+
+                    var dataTable = google.visualization.arrayToDataTable(regionData);
+                    var options = { colorAxis: {colors: ['#e0f7fa', '#007bff']} };
+                    var chart = new google.visualization.GeoChart(document.getElementById('geo_chart'));
+                    chart.draw(dataTable, options);
+                });
+        }
+
+        // Simulated Device & Browser Data
+        var deviceData = {
+            labels: ["Mobile", "Tablet", "Desktop"],
+            datasets: [{
+                data: [45, 15, 40],
+                backgroundColor: ["#007bff", "#28a745", "#dc3545"]
+            }]
+        };
+        new Chart(document.getElementById("deviceChart"), {
+            type: 'pie',
+            data: deviceData
+        });
+
+        // Simulated Real-Time User Data
+        let userCount = 5;
+        setInterval(() => {
+            userCount = Math.floor(Math.random() * 10) + 1;
+            realTimeChart.data.datasets[0].data.push(userCount);
+            realTimeChart.data.labels.push(new Date().toLocaleTimeString());
+            realTimeChart.update();
+        }, 2000);
+
+        var realTimeChart = new Chart(document.getElementById("realTimeUsers"), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "Users Online",
+                    data: [],
+                    borderColor: "#007bff",
+                    fill: false
+                }]
+            }
+        });
+
+        // Simulated Page Views Data
+        var pageViewsData = {
+            labels: ["Home", "Products", "AR Model", "Contact"],
+            datasets: [{
+                label: "Page Views",
+                data: [120, 80, 100, 50],
+                backgroundColor: "#ffc107"
+            }]
+        };
+        new Chart(document.getElementById("pageViewsChart"), {
+            type: 'bar',
+            data: pageViewsData
+        });
+    </script>
+
+</body>
+</html>
