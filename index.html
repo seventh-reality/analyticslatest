@@ -30,6 +30,8 @@
         <h2>📊 AR Analytics</h2>
         <p>Track user interactions in WebAR.</p>
         <button onclick="downloadAnalytics()">Download Analytics</button>
+        <p>Total Clicks: <span id="totalClicks">0</span></p>
+        <p>Button Clicks: <span id="buttonClicks">0</span></p>
     </div>
     
     <div class="content">
@@ -56,15 +58,18 @@
     </div>
     
     <script>
-        let analyticsData = { clicks: 0, buttonClicks: 0, devices: {} };
+        let analyticsData = { clicks: 0, buttonClicks: 0 };
         
         function updateStorage() {
             localStorage.setItem('analyticsData', JSON.stringify(analyticsData));
+            document.getElementById('totalClicks').innerText = analyticsData.clicks;
+            document.getElementById('buttonClicks').innerText = analyticsData.buttonClicks;
         }
         
         function loadStorage() {
             let data = localStorage.getItem('analyticsData');
             if (data) analyticsData = JSON.parse(data);
+            updateStorage();
         }
         
         document.addEventListener("click", (e) => {
@@ -72,15 +77,13 @@
             updateStorage();
         });
         
-        function trackButtonClick(buttonName) {
+        function trackButtonClick() {
             analyticsData.buttonClicks++;
             updateStorage();
         }
         
         function downloadAnalytics() {
-            let csvContent = "data:text/csv;charset=utf-8," + 
-                "Total Clicks, Button Clicks\n" + 
-                `${analyticsData.clicks},${analyticsData.buttonClicks}`;
+            let csvContent = "data:text/csv;charset=utf-8,Total Clicks,Button Clicks\n" + `${analyticsData.clicks},${analyticsData.buttonClicks}`;
             let encodedUri = encodeURI(csvContent);
             let link = document.createElement("a");
             link.setAttribute("href", encodedUri);
