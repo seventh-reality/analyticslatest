@@ -6,7 +6,6 @@
     <title>AR Analytics Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/charts/loader.js"></script>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-YB6FWQS3VP"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -53,16 +52,6 @@
             <h3>🔥 Heatmap - Model Interactions</h3>
             <div id="heatmap"></div>
         </div>
-        
-        <div class="card">
-            <h3>🕶️ AR Model Viewer</h3>
-            <a-scene>
-                <a-assets>
-                    <a-asset-item id="model" src="CT_Room.glb"></a-asset-item>
-                </a-assets>
-                <a-entity id="arModel" gltf-model="#model" position="0 1 -3" scale="1 1 1" rotation="0 0 0"></a-entity>
-            </a-scene>
-        </div>
     </div>
     
     <script>
@@ -81,9 +70,6 @@
                 });
         }
         
-        document.getElementById("arModel").addEventListener("click", () => {
-            gtag('event', '3D Model Click', { 'event_category': 'Model Interaction' });
-        });
         document.addEventListener("click", (e) => {
             let x = e.pageX;
             let y = e.pageY;
