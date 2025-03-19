@@ -29,8 +29,6 @@
     <div class="sidebar">
         <h2>📊 AR Analytics</h2>
         <p>Track user interactions in WebAR.</p>
-        <p>Total Clicks: <span id="totalClicks">0</span></p>
-        <p>Button Clicks: <span id="buttonClicks">0</span></p>
         <button onclick="downloadAnalytics()">Download Analytics</button>
     </div>
     
@@ -58,30 +56,33 @@
     </div>
     
     <script>
-        let analyticsData = { clicks: 0, buttonClicks: 0 };
-        function updateUI() {
-            document.getElementById('totalClicks').innerText = analyticsData.clicks;
-            document.getElementById('buttonClicks').innerText = analyticsData.buttonClicks;
-        }
+        let analyticsData = JSON.parse(localStorage.getItem('analyticsData')) || { clicks: 0, buttonClicks: 0, interactions: [] };
+        
         function updateStorage() {
             localStorage.setItem('analyticsData', JSON.stringify(analyticsData));
-            updateUI();
         }
-        function loadStorage() {
-            let data = localStorage.getItem('analyticsData');
-            if (data) analyticsData = JSON.parse(data);
-            updateUI();
-        }
-        document.addEventListener("click", () => {
+        
+        document.addEventListener("click", (e) => {
             analyticsData.clicks++;
+            let x = e.pageX - document.getElementById("heatmap").offsetLeft;
+            let y = e.pageY - document.getElementById("heatmap").offsetTop;
+            analyticsData.interactions.push({ x, y, time: new Date().toISOString() });
             updateStorage();
+            let dot = document.createElement("div");
+            dot.className = "heat-dot";
+            dot.style.left = `${x}px`;
+            dot.style.top = `${y}px`;
+            document.getElementById("heatmap").appendChild(dot);
         });
+        
         function trackButtonClick() {
             analyticsData.buttonClicks++;
             updateStorage();
         }
+        
         function downloadAnalytics() {
-            let csvContent = "data:text/csv;charset=utf-8,Total Clicks,Button Clicks\n" + `${analyticsData.clicks},${analyticsData.buttonClicks}`;
+            let csvContent = "data:text/csv;charset=utf-8,Time,X,Y\n" + 
+                analyticsData.interactions.map(e => `${e.time},${e.x},${e.y}`).join("\n");
             let encodedUri = encodeURI(csvContent);
             let link = document.createElement("a");
             link.setAttribute("href", encodedUri);
@@ -89,7 +90,6 @@
             document.body.appendChild(link);
             link.click();
         }
-        loadStorage();
     </script>
 </body>
 </html>
