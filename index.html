@@ -3,93 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Analytics Dashboard</title>
+    <title>Website Analytics Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://www.gstatic.com/charts/loader.js"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YB6FWQS3VP"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-YB6FWQS3VP');
-    </script>
     <style>
-        body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; }
-        .sidebar { width: 250px; height: 100vh; background: #202124; color: white; padding: 20px; position: fixed; }
-        .sidebar h2 { font-size: 22px; margin-bottom: 20px; }
-        .content { margin-left: 270px; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .chart-container { display: flex; flex-wrap: wrap; gap: 20px; }
-        canvas { max-width: 100%; }
-        #heatmap { width: 100%; height: 400px; background: #e8e8e8; position: relative; border-radius: 8px; overflow: hidden; }
-        .heat-dot { position: absolute; width: 10px; height: 10px; background: red; border-radius: 50%; opacity: 0.7; }
+        .card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .card-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .card-content {
+            padding: 10px;
+        }
+        .card-footer {
+            text-align: right;
+            font-size: 0.9rem;
+            color: #999;
+        }
     </style>
 </head>
-<body>
-    <div class="sidebar">
-        <h2>📊 AR Analytics</h2>
-        <p>Track user interactions in WebAR.</p>
-        <button onclick="downloadAnalytics()">Download Analytics</button>
-    </div>
-    
-    <div class="content">
-        <div class="card">
-            <h3>📍 Visitor Locations</h3>
-            <div id="geo_chart" style="width: 100%; height: 400px;"></div>
+<body class="bg-gray-100">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-6">
+
+        <!-- Dashboard Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-semibold text-gray-800">Website Analytics Dashboard</h1>
         </div>
-        
-        <div class="chart-container">
-            <div class="card" style="flex: 1;">
-                <h3>📱 Device & Browser Usage</h3>
-                <canvas id="deviceChart"></canvas>
+
+        <!-- Analytics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Total Visits Card -->
+            <div class="card">
+                <div class="card-header">Total Visits</div>
+                <div class="card-content text-center">
+                    <h2 class="text-2xl font-bold text-blue-600" id="total-visits">1,250</h2>
+                </div>
+                <div class="card-footer">Last 30 Days</div>
             </div>
-            <div class="card" style="flex: 1;">
-                <h3>📊 Real-Time Users</h3>
-                <canvas id="realTimeUsers"></canvas>
+
+            <!-- Bounce Rate Card -->
+            <div class="card">
+                <div class="card-header">Bounce Rate</div>
+                <div class="card-content text-center">
+                    <h2 class="text-2xl font-bold text-red-600" id="bounce-rate">45%</h2>
+                </div>
+                <div class="card-footer">Last 30 Days</div>
+            </div>
+
+            <!-- Conversion Rate Card -->
+            <div class="card">
+                <div class="card-header">Conversion Rate</div>
+                <div class="card-content text-center">
+                    <h2 class="text-2xl font-bold text-green-600" id="conversion-rate">3.5%</h2>
+                </div>
+                <div class="card-footer">Last 30 Days</div>
             </div>
         </div>
-        
-        <div class="card">
-            <h3>🔥 Heatmap - Model Interactions</h3>
-            <div id="heatmap"></div>
+
+        <!-- Analytics Charts Section -->
+        <div class="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Traffic Source Chart -->
+            <div class="card">
+                <div class="card-header">Traffic Source Breakdown</div>
+                <div class="card-content">
+                    <canvas id="trafficSourceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- User Engagement Chart -->
+            <div class="card">
+                <div class="card-header">User Engagement</div>
+                <div class="card-content">
+                    <canvas id="userEngagementChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
-    
+
+    <!-- JavaScript to Initialize Charts -->
     <script>
-        let analyticsData = JSON.parse(localStorage.getItem('analyticsData')) || { clicks: 0, buttonClicks: 0, interactions: [] };
-        
-        function updateStorage() {
-            localStorage.setItem('analyticsData', JSON.stringify(analyticsData));
-        }
-        
-        document.addEventListener("click", (e) => {
-            analyticsData.clicks++;
-            let x = e.pageX - document.getElementById("heatmap").offsetLeft;
-            let y = e.pageY - document.getElementById("heatmap").offsetTop;
-            analyticsData.interactions.push({ x, y, time: new Date().toISOString() });
-            updateStorage();
-            let dot = document.createElement("div");
-            dot.className = "heat-dot";
-            dot.style.left = `${x}px`;
-            dot.style.top = `${y}px`;
-            document.getElementById("heatmap").appendChild(dot);
+        // Example Data for the Traffic Source Pie Chart
+        const trafficSourceData = {
+            labels: ['Direct', 'Organic Search', 'Referral', 'Social Media'],
+            datasets: [{
+                data: [40, 25, 20, 15],
+                backgroundColor: ['#4CAF50', '#FFC107', '#2196F3', '#FF5722'],
+            }]
+        };
+
+        // Example Data for the User Engagement Line Chart
+        const engagementData = {
+            labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+            datasets: [{
+                label: 'Active Users',
+                data: [100, 150, 180, 210, 250, 300, 350],
+                borderColor: '#3B82F6',
+                fill: false,
+                tension: 0.4,
+            }]
+        };
+
+        // Initialize Traffic Source Pie Chart
+        const trafficSourceChart = new Chart(document.getElementById('trafficSourceChart'), {
+            type: 'pie',
+            data: trafficSourceData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.label + ': ' + tooltipItem.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
         });
-        
-        function trackButtonClick() {
-            analyticsData.buttonClicks++;
-            updateStorage();
-        }
-        
-        function downloadAnalytics() {
-            let csvContent = "data:text/csv;charset=utf-8,Time,X,Y\n" + 
-                analyticsData.interactions.map(e => `${e.time},${e.x},${e.y}`).join("\n");
-            let encodedUri = encodeURI(csvContent);
-            let link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "analytics_data.csv");
-            document.body.appendChild(link);
-            link.click();
-        }
+
+        // Initialize User Engagement Line Chart
+        const userEngagementChart = new Chart(document.getElementById('userEngagementChart'), {
+            type: 'line',
+            data: engagementData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Active Users'
+                        }
+                    }
+                },
+            }
+        });
     </script>
 </body>
 </html>
