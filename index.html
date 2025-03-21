@@ -1,124 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Gemini AI Chatbot (Simulated)</title>
-<style>
-body {
-  font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  margin: 0;
-}
-
-#chat-container {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid #ccc;
-}
-
-#input-container {
-  display: flex;
-  padding: 10px;
-  border-top: 1px solid #ccc;
-}
-
-#user-input {
-  flex-grow: 1;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-#send-button {
-  padding: 8px 15px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-.user-message {
-  background-color: #e0f7fa;
-  padding: 8px;
-  margin-bottom: 5px;
-  border-radius: 4px;
-  text-align: right;
-}
-
-.bot-message {
-  background-color: #f0f0f0;
-  padding: 8px;
-  margin-bottom: 5px;
-  border-radius: 4px;
-  text-align: left;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR with AI Chatbot</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .chat-container { position: fixed; bottom: 20px; right: 20px; width: 300px; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); display: none; }
+        .chat-box { height: 200px; overflow-y: auto; border-bottom: 1px solid #ddd; padding: 5px; }
+        .chat-input { width: 100%; padding: 8px; border-radius: 5px; }
+        .send-btn { margin-top: 5px; padding: 8px; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+        .send-btn:hover { background: #0056b3; }
+    </style>
 </head>
 <body>
+    <h1>WebAR with AI Chatbot</h1>
+    
+    <!-- 3D Model Viewer -->
+    <model-viewer id="humanModel" src="human.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate>
+        <button slot="ar-button">View in AR</button>
+    </model-viewer>
+    
+    <button onclick="toggleChat()">Toggle Chat</button>
+    
+    <!-- Chatbot Container -->
+    <div class="chat-container" id="chat-container">
+        <div class="chat-box" id="chat-box"></div>
+        <input type="text" id="user-input" class="chat-input" placeholder="Ask something...">
+        <button class="send-btn" onclick="sendMessage()">Ask</button>
+    </div>
+    
+    <script>
+        let animations = ["Idle", "Wave", "Jump"];
+        let currentAnimation = 0;
+        function toggleChat() { 
+            let chatContainer = document.getElementById("chat-container");
+            chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none"; 
+        }
 
-<div id="chat-container">
-  <div class="bot-message">Welcome! I'm a simulated Gemini AI. Ask me anything!</div>
+        function sendMessage() {
+            let userMessage = document.getElementById("user-input").value.trim();
+            if (!userMessage) return;
+            
+            let chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
+            
+            let botMessage = getBotResponse(userMessage);
+            chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
+            
+            let modelViewer = document.getElementById("humanModel");
+            modelViewer.setAttribute("animation-name", animations[currentAnimation]);
+            modelViewer.play();
+            setTimeout(() => { modelViewer.pause(); }, 5000);
+            currentAnimation = (currentAnimation + 1) % animations.length;
+            
+            let utterance = new SpeechSynthesisUtterance(botMessage);
+            speechSynthesis.speak(utterance);
+            document.getElementById("user-input").value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
-</div>
-
-<div id="input-container">
-  <input type="text" id="user-input" placeholder="Type your message...">
-  <button id="send-button">Send</button>
-</div>
-
-<script>
-const chatContainer = document.getElementById('chat-container');
-const userInput = document.getElementById('user-input');
-const sendButton = document.getElementById('send-button');
-
-sendButton.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', function(event) {
-    if (event.key === "Enter") {
-        sendMessage();
-    }
-});
-
-function sendMessage() {
-  const message = userInput.value.trim();
-  if (message) {
-    appendMessage('user', message);
-    userInput.value = '';
-
-    // Simulate AI response (replace with actual AI integration if available)
-    simulateAIResponse(message);
-  }
-}
-
-function appendMessage(sender, message) {
-  const messageDiv = document.createElement('div');
-  messageDiv.classList.add(`${sender}-message`);
-  messageDiv.textContent = message;
-  chatContainer.appendChild(messageDiv);
-  chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll
-}
-
-function simulateAIResponse(userMessage) {
-    // This is where you would integrate with an actual AI API.
-    // For now, it's a simple simulation.
-    const responses = [
-        "That's an interesting question!",
-        "Let me think about that...",
-        "I'm still learning, but I'll do my best to answer.",
-        "Could you please provide more details?",
-        "Okay, I understand."
-    ];
-
-    const response = responses[Math.floor(Math.random() * responses.length)];
-
-    setTimeout(() => { // Simulate a delay for AI processing
-        appendMessage('bot', response);
-    }, 500); // 0.5 second delay
-}
-</script>
-
+        function getBotResponse(userMessage) {
+            userMessage = userMessage.toLowerCase();
+            if (userMessage.includes("hello") || userMessage.includes("hi")) {
+                return "Hello! How can I assist you today?";
+            } else if (userMessage.includes("ar") || userMessage.includes("model")) {
+                return "You can view this 3D model in Augmented Reality using the AR button.";
+            } else {
+                return "I'm here to help! Ask me about WebAR or the model.";
+            }
+        }
+    </script>
 </body>
 </html>
