@@ -149,11 +149,20 @@ if (userMessage.includes("hello") || userMessage.includes("hi")) {
 return "Hello! How can I assist you today?";
 } else if (userMessage.includes("ar") || userMessage.includes("model")) {
 return "You can view this 3D model in Augmented Reality using the AR button.";
-}else if (userMessage.includes("webar") || userMessage.includes("3d")) {
-return "augmented reality is very good of showing medical devices with out real model.";
-} 
-else {
-return "I'm here to help! Ask me about WebAR or the model.";
+} else if (userMessage.includes("how does webar work")) {
+return "WebAR works by using WebGL and WebXR technologies to render 3D models and provide AR experiences directly in the browser.";
+} else if (userMessage.includes("what is webar")) {
+return "WebAR is an augmented reality experience accessible through web browsers without requiring an app installation.";
+} else if (userMessage.includes("benefits of webar")) {
+return "WebAR offers accessibility, no need for app downloads, cross-platform compatibility, and seamless integration with websites.";
+} else if (userMessage.includes("how to interact with the model")) {
+return "You can rotate, zoom, and move the model using touch gestures or mouse controls in the viewer.";
+} else if (userMessage.includes("can i customize the ar experience")) {
+return "Yes! WebAR allows you to customize models, animations, lighting, and interactions to create immersive experiences.";
+} else if (userMessage.includes("difference between ar and webar")) {
+return "AR generally requires an app, while WebAR runs directly in the browser, making it more accessible.";
+} else {
+return "I'm here to help! Ask me about WebAR, model interactions, or AR technologies.";
 }
 }
 </script>
