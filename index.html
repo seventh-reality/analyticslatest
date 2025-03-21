@@ -99,61 +99,67 @@
         <button class="send-btn" onclick="sendMessage()">Ask</button>
     </div>
 
-    <script>
-        let animations = ["Idle", "Wave", "Jump"];
-        let currentAnimation = 0;
-        let speaking = false;
+<script>
+    let animations = ["Idle", "Wave", "Jump"];
+    let currentAnimation = 0;
+    let speaking = false;
 
-        function toggleChat() { 
-            let chatContainer = document.getElementById("chat-container");
-            chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none"; 
-        }
+    function toggleChat() { 
+        let chatContainer = document.getElementById("chat-container");
+        chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none"; 
+    }
 
-        function sendMessage() {
-            let userMessage = document.getElementById("user-input").value.trim();
-            if (!userMessage) return;
+    function sendMessage() {
+        let userMessage = document.getElementById("user-input").value.trim();
+        if (!userMessage) return;
 
-            let chatBox = document.getElementById("chat-box");
-            chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
+        let chatBox = document.getElementById("chat-box");
+        chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
 
-            let botMessage = getBotResponse(userMessage);
-            chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
+        let botMessage = getBotResponse(userMessage);
+        chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
 
-            let modelViewer = document.getElementById("humanModel");
+        let modelViewer = document.getElementById("humanModel");
 
-            // Start the animation
-            modelViewer.setAttribute("animation-name", animations[currentAnimation]);
-            modelViewer.play();
-            currentAnimation = (currentAnimation + 1) % animations.length;
+        // Start Animation
+        let animationName = animations[currentAnimation];
+        modelViewer.setAttribute("animation-name", animationName);
+        currentAnimation = (currentAnimation + 1) % animations.length;
 
-            // Create speech synthesis and handle events
-            let utterance = new SpeechSynthesisUtterance(botMessage);
+        // Speech Synthesis
+        let utterance = new SpeechSynthesisUtterance(botMessage);
+        utterance.lang = "en-US";
 
-            utterance.onstart = () => {
-                speaking = true; // Speech has started, animation should continue
-            };
+        utterance.onstart = () => {
+            speaking = true;
+            modelViewer.setAttribute("animation-name", animationName); // Keep animation running
+        };
 
-            utterance.onend = () => {
-                speaking = false; // Speech has ended, stop animation
-                modelViewer.pause(); // Stop the animation after speech
-            };
+        utterance.onend = () => {
+            speaking = false;
+            modelViewer.setAttribute("animation-name", "Idle"); // Reset to idle after speech
+        };
 
+        setTimeout(() => {
             speechSynthesis.speak(utterance);
-            document.getElementById("user-input").value = "";
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
+        }, 100); // Add a small delay for desktop compatibility
 
-        function getBotResponse(userMessage) {
-            userMessage = userMessage.toLowerCase();
-            if (userMessage.includes("hello") || userMessage.includes("hi")) {
-                return "Hello! How can I assist you today?";
-            } else if (userMessage.includes("ar") || userMessage.includes("model")) {
-                return "You can view this 3D model in Augmented Reality using the AR button.";
-            } else {
-                return "I'm here to help! Ask me about WebAR or the model.";
-            }
+        document.getElementById("user-input").value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function getBotResponse(userMessage) {
+        userMessage = userMessage.toLowerCase();
+        if (userMessage.includes("hello") || userMessage.includes("hi")) {
+            return "Hello! How can I assist you today?";
+        } else if (userMessage.includes("ar") || userMessage.includes("model")) {
+            return "You can view this 3D model in Augmented Reality using the AR button.";
+        } else {
+            return "I'm here to help! Ask me about WebAR or the model.";
         }
-    </script>
+    }
+</script>
+
 
 </body>
 </html>
