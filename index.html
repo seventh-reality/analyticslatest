@@ -3,101 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR with AI Chatbot (GEO Integrated)</title>
+<title>WebAR with Polygon.io Chatbot</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
 
 <style>
 body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-
-/* Centered 3D Model */
-.model-container {
-display: flex;
-align-items: center;
-justify-content: center;
-width: 100%;
-height: 400px;
-}
-
-model-viewer {
-width: 100%;
-max-width: 600px;
-height: 100%;
-}
-
-/* Chatbot Styles */
-.chat-container {
-position: fixed;
-bottom: 20px;
-right: 20px;
-width: 300px;
-background: #fff;
-padding: 10px;
-border-radius: 10px;
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-display: none;
-}
-
-.chat-box {
-height: 200px;
-overflow-y: auto;
-border-bottom: 1px solid #ddd;
-padding: 5px;
-}
-
-.chat-input {
-width: 100%;
-padding: 8px;
-border-radius: 5px;
-}
-
-.send-btn {
-margin-top: 5px;
-padding: 8px;
-background: #007bff;
-color: white;
-border-radius: 5px;
-cursor: pointer;
-}
-
-.send-btn:hover {
-background: #0056b3;
-}
-
-/* Center button */
-.toggle-btn {
-margin-top: 20px;
-padding: 10px 20px;
-background: #28a745;
-color: white;
-border-radius: 5px;
-cursor: pointer;
-border: none;
-}
-
-.toggle-btn:hover {
-background: #218838;
-}
-
-.loader {
-  display: none;
-  width: 20px;
-  height: 20px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 10px auto;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+.model-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 400px; }
+model-viewer { width: 100%; max-width: 600px; height: 100%; }
+.chat-container { position: fixed; bottom: 20px; right: 20px; width: 300px; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); display: none; }
+.chat-box { height: 200px; overflow-y: auto; border-bottom: 1px solid #ddd; padding: 5px; }
+.chat-input { width: 100%; padding: 8px; border-radius: 5px; }
+.send-btn { margin-top: 5px; padding: 8px; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+.send-btn:hover { background: #0056b3; }
+.toggle-btn { margin-top: 20px; padding: 10px 20px; background: #28a745; color: white; border-radius: 5px; cursor: pointer; border: none; }
+.toggle-btn:hover { background: #218838; }
+.loader { display: none; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin: 10px auto; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<h1>WebAR with AI Chatbot</h1>
+<h1>WebAR with Polygon.io Chatbot</h1>
 
 <!-- 3D Model Container -->
 <div class="model-container">
@@ -111,71 +37,52 @@ background: #218838;
 <!-- Chatbot Container -->
 <div class="chat-container" id="chat-container">
 <div class="chat-box" id="chat-box"></div>
-<input type="text" id="user-input" class="chat-input" placeholder="Ask something...">
-<button class="send-btn" onclick="sendMessage()">Ask</button>
+<input type="text" id="user-input" class="chat-input" placeholder="Enter stock ticker (e.g., AAPL, TSLA)...">
+<button class="send-btn" onclick="sendMessage()">Get Data</button>
 <div class="loader" id="loader"></div>
 </div>
 
 <script>
-let animations = ["Idle", "Wave", "Jump"];
-let currentAnimation = 0;
-let speaking = false;
-
 function toggleChat() {
     let chatContainer = document.getElementById("chat-container");
     chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none";
 }
 
 async function sendMessage() {
-    let userMessage = document.getElementById("user-input").value.trim();
+    let userMessage = document.getElementById("user-input").value.trim().toUpperCase();
     if (!userMessage) return;
 
     let chatBox = document.getElementById("chat-box");
     chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
-
+    
     document.getElementById("loader").style.display = "block";
-    let botMessage = await getBotResponse(userMessage);
+    let botMessage = await getStockData(userMessage);
     document.getElementById("loader").style.display = "none";
 
     chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
-
-    let modelViewer = document.getElementById("humanModel");
-    modelViewer.setAttribute("animation-name", animations[currentAnimation]);
-    modelViewer.play();
-    currentAnimation = (currentAnimation + 1) % animations.length;
-
-    let utterance = new SpeechSynthesisUtterance(botMessage);
-    utterance.onstart = () => { speaking = true; };
-    utterance.onend = () => { speaking = false; modelViewer.pause(); };
-    speechSynthesis.speak(utterance);
-
     document.getElementById("user-input").value = "";
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-async function getBotResponse(userMessage) {
-    try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "WcLyj4kQp17HoWxvAwRs3rCWCX06yIUH"
-            },
-            body: JSON.stringify({
-                model: "gpt-3.5-turbo",
-                messages: [{ role: "system", content: "You are an AI assistant specialized in WebAR." },
-                            { role: "user", content: userMessage }]
-            })
-        });
+async function getStockData(symbol) {
+    const apiKey = "WcLyj4kQp17HoWxvAwRs3rCWCX06yIUH";  // Replace with your Polygon.io API Key
+    const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/prev?adjusted=true&apiKey=${apiKey}`;
 
+    try {
+        const response = await fetch(url);
         if (!response.ok) throw new Error("API request failed");
+
         const data = await response.json();
-        return data.choices?.[0]?.message?.content || "I'm not sure how to respond to that.";
+        if (!data.results || data.results.length === 0) return "No data found. Try another symbol.";
+
+        const stock = data.results[0];
+        return `📈 ${symbol} Price: $${stock.c} | High: $${stock.h} | Low: $${stock.l} | Volume: ${stock.v}`;
     } catch (error) {
-        console.error("Error fetching AI response:", error);
-        return "Sorry, something went wrong. Please try again.";
+        console.error("Error fetching stock data:", error);
+        return "Error fetching stock data. Try again.";
     }
 }
 </script>
+
 </body>
 </html>
