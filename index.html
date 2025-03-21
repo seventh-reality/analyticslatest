@@ -34,6 +34,8 @@
     <script>
         let animations = ["Idle", "Wave", "Jump"];
         let currentAnimation = 0;
+        let speaking = false;
+        
         function toggleChat() { 
             let chatContainer = document.getElementById("chat-container");
             chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none"; 
@@ -50,12 +52,24 @@
             chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
             
             let modelViewer = document.getElementById("humanModel");
+            
+            // Start the animation
             modelViewer.setAttribute("animation-name", animations[currentAnimation]);
             modelViewer.play();
-            setTimeout(() => { modelViewer.pause(); }, 5000);
             currentAnimation = (currentAnimation + 1) % animations.length;
-            
+
+            // Create speech synthesis and handle events
             let utterance = new SpeechSynthesisUtterance(botMessage);
+
+            utterance.onstart = () => {
+                speaking = true; // Speech has started, animation should continue
+            };
+
+            utterance.onend = () => {
+                speaking = false; // Speech has ended, stop animation
+                modelViewer.pause(); // Stop the animation after speech
+            };
+
             speechSynthesis.speak(utterance);
             document.getElementById("user-input").value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
