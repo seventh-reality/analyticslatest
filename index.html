@@ -8,7 +8,7 @@
     
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-
+        
         /* Centered 3D Model */
         .model-container {
             display: flex;
@@ -57,7 +57,6 @@
             color: white;
             border-radius: 5px;
             cursor: pointer;
-            border: none;
         }
 
         .send-btn:hover {
@@ -103,6 +102,7 @@
     <script>
         let animations = ["Idle", "Wave", "Jump"];
         let currentAnimation = 0;
+                                
 
         function toggleChat() { 
             let chatContainer = document.getElementById("chat-container");
@@ -121,28 +121,24 @@
 
             let modelViewer = document.getElementById("humanModel");
 
-            // Start animation when speaking
-            let animationName = animations[currentAnimation];
-            modelViewer.setAttribute("animation-name", animationName);
+            // Start the animation
+            modelViewer.setAttribute("animation-name", animations[currentAnimation]);
+            modelViewer.play();
+            currentAnimation = (currentAnimation + 1) % animations.length;
 
+            // Create speech synthesis and handle events
             let utterance = new SpeechSynthesisUtterance(botMessage);
-            utterance.lang = "en-US";
 
             utterance.onstart = () => {
-                modelViewer.setAttribute("animation-name", animationName); // Keep animation running
+                speaking = true; // Speech has started, animation should continue
             };
 
             utterance.onend = () => {
-                modelViewer.setAttribute("animation-name", "Idle"); // Reset to idle after speech
+                speaking = false; // Speech has ended, stop animation
+                modelViewer.pause(); // Stop the animation after speech
             };
 
-            setTimeout(() => {
-                speechSynthesis.speak(utterance);
-            }, 0); // Add a small delay for desktop compatibility
-
-            // Cycle animations
-            currentAnimation = (currentAnimation + 1) % animations.length;
-
+            speechSynthesis.speak(utterance);
             document.getElementById("user-input").value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
         }
