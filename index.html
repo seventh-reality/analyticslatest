@@ -25,7 +25,6 @@
     </style>
 </head>
 <body>
-
     <h1>WebAR AI Chatbot</h1>
     
     <div class="model-container">
@@ -67,20 +66,26 @@
             modelViewer.play();
             currentAnimation = (currentAnimation + 1) % animations.length;
 
-            let utterance = new SpeechSynthesisUtterance(botMessage);
-            utterance.voice = speechSynthesis.getVoices().find(voice => voice.name.includes("Google")) || speechSynthesis.getVoices()[0];
-            utterance.rate = 1.1;
-            utterance.pitch = 1.2;
-            
-            utterance.onstart = () => { speaking = true; };
-            utterance.onend = () => { 
-                speaking = false; 
-                modelViewer.pause(); 
-            };
-
-            speechSynthesis.speak(utterance);
+            speakResponse(botMessage);
             document.getElementById("user-input").value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function speakResponse(text) {
+            let utterance = new SpeechSynthesisUtterance(text);
+            
+            let voices = speechSynthesis.getVoices();
+            utterance.voice = voices.find(voice => voice.name.includes("Google")) || voices[0];
+            utterance.rate = 1.1;
+            utterance.pitch = 1.2;
+
+            utterance.onstart = () => { speaking = true; };
+            utterance.onend = () => { 
+                speaking = false;
+                document.getElementById("humanModel").pause(); 
+            };
+            
+            speechSynthesis.speak(utterance);
         }
 
         async function getBotResponse(userMessage) {
@@ -96,6 +101,12 @@
                 return "Sorry, I couldn't process your request.";
             }
         }
+
+        speechSynthesis.onvoiceschanged = () => {
+            if (!speechSynthesis.getVoices().length) {
+                setTimeout(() => speakResponse("Hello! I am ready to chat with you."), 500);
+            }
+        };
     </script>
 </body>
 </html>
