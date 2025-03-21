@@ -9,7 +9,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const openai = new OpenAIApi(new Configuration({
-    apiKey: process.env.OPENAI_API_KEY, // API Key stored securely
+    apiKey: process.env.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, // API Key stored securely
 }));
 
 app.post("/api/chatbot", async (req, res) => {
