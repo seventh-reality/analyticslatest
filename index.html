@@ -149,7 +149,10 @@ if (userMessage.includes("hello") || userMessage.includes("hi")) {
 return "Hello! How can I assist you today?";
 } else if (userMessage.includes("ar") || userMessage.includes("model")) {
 return "You can view this 3D model in Augmented Reality using the AR button.";
-} else {
+}else if (userMessage.includes("webar") || userMessage.includes("3d")) {
+return "augmented reality is very good of showing medical devices with out real model.";
+} 
+else {
 return "I'm here to help! Ask me about WebAR or the model.";
 }
 }
