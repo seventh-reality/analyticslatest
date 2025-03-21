@@ -108,5 +108,19 @@
             }
         };
     </script>
+    async function getBotResponse(userMessage) {
+    try {
+        const response = await fetch("http://localhost:5000/api/chatbot", {  // Backend handles API call
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: userMessage })
+        });
+        const data = await response.json();
+        return data.reply || "I'm here to help! Ask me about WebAR or the model.";
+    } catch (error) {
+        return "Sorry, I couldn't process your request.";
+    }
+}
+
 </body>
 </html>
