@@ -101,7 +101,7 @@
     </div>
 
     <script>
-        let animations = ["Wave", "Jump"];
+        let animations = ["Idle", "Wave", "Jump"];
         let currentAnimation = 0;
 
         function toggleChat() { 
@@ -138,7 +138,7 @@
 
             setTimeout(() => {
                 speechSynthesis.speak(utterance);
-            }, 100); // Add a small delay for desktop compatibility
+            }, 0); // Add a small delay for desktop compatibility
 
             // Cycle animations
             currentAnimation = (currentAnimation + 1) % animations.length;
