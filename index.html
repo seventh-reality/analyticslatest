@@ -100,8 +100,7 @@ background: #218838;
 </div>
 
 <script>
-let animations = ["Idle", "Wave", "Jump"];
-let currentAnimation = 0;
+let animations = ["Idle", "Wave", "Jump", "Talk"];
 let speaking = false;
 
 function toggleChat() {
@@ -121,21 +120,23 @@ chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
 
 let modelViewer = document.getElementById("humanModel");
 
-// Start the animation
-modelViewer.setAttribute("animation-name", animations[currentAnimation]);
+// Start lip-sync animation
+modelViewer.setAttribute("animation-name", "Talk");
 modelViewer.play();
-currentAnimation = (currentAnimation + 1) % animations.length;
 
-// Create speech synthesis and handle events
+// Create speech synthesis and sync with lip movement
 let utterance = new SpeechSynthesisUtterance(botMessage);
 
 utterance.onstart = () => {
-speaking = true; // Speech has started, animation should continue
+    speaking = true;
+    modelViewer.setAttribute("animation-name", "Talk");
+    modelViewer.play();
 };
 
 utterance.onend = () => {
-speaking = false; // Speech has ended, stop animation
-modelViewer.pause(); // Stop the animation after speech
+    speaking = false;
+    modelViewer.setAttribute("animation-name", "Idle");
+    modelViewer.play();
 };
 
 speechSynthesis.speak(utterance);
