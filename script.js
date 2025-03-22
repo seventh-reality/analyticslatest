@@ -1,53 +1,55 @@
+const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"; // Replace with your OpenAI API key
+
 let animations = ["Idle", "Wave", "Jump"];
 let currentAnimation = 0;
+let speaking = false;
 
 function toggleChat() {
-  let chatContainer = document.getElementById("chat-container");
-  chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none";
+    let chatContainer = document.getElementById("chat-container");
+    chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none";
 }
 
 async function sendMessage() {
-  let userMessage = document.getElementById("user-input").value.trim();
-  if (!userMessage) return;
+    let userMessage = document.getElementById("user-input").value.trim();
+    if (!userMessage) return;
 
-  let chatBox = document.getElementById("chat-box");
-  chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
-
-  try {
+    let chatBox = document.getElementById("chat-box");
+    chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
+    
     let botMessage = await getBotResponse(userMessage);
     chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
 
     let modelViewer = document.getElementById("humanModel");
+
+    // Start animation
     modelViewer.setAttribute("animation-name", animations[currentAnimation]);
+    modelViewer.play();
     currentAnimation = (currentAnimation + 1) % animations.length;
 
+    // Speech synthesis
     let utterance = new SpeechSynthesisUtterance(botMessage);
+    utterance.onstart = () => { speaking = true; };
+    utterance.onend = () => { speaking = false; modelViewer.pause(); };
+    
     speechSynthesis.speak(utterance);
-  } catch (error) {
-    console.error("Error fetching bot response:", error);
-    chatBox.innerHTML += `<p><b>Bot:</b> Sorry, something went wrong.</p>`;
-  }
-
-  document.getElementById("user-input").value = "";
-  chatBox.scrollTop = chatBox.scrollHeight;
+    
+    document.getElementById("user-input").value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 async function getBotResponse(userMessage) {
-  try {
-    const response = await fetch("http://localhost:3000/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: userMessage }]
+        })
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
     const data = await response.json();
-    return data.reply || "Sorry, I couldn't understand that.";
-  } catch (error) {
-    console.error("Fetch error:", error);
-    return "Sorry, I'm having trouble connecting to the server.";
-  }
+    return data.choices[0].message.content;
 }
