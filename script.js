@@ -42,7 +42,7 @@ async function getBotResponse(userMessage) {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${OPENAI_API_KEY}`
+            "Authorization": `Bearer ${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}`
         },
         body: JSON.stringify({
             model: "gpt-3.5-turbo",
