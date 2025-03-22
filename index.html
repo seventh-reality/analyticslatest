@@ -1,33 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR with AI Chatbot</title>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
-<link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D-CXL Pro Analytics Dashboard</title>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YB6FWQS3VP"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-YB6FWQS3VP');  // Replace with your own Google Analytics ID
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Tailwind CSS (for layout and design) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Heatmap.js -->
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js"></script>
+
+    <style>
+        .card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .card-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .card-content {
+            padding: 10px;
+        }
+        .card-footer {
+            text-align: right;
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        /* Heatmap container */
+        #heatmap-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin-top: 30px;
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
-<body>
+<body class="bg-gray-100">
 
-<h1>WebAR with AI Chatbot</h1>
+    <!-- Main Container -->
+    <div class="container mx-auto p-6">
 
-<!-- 3D Model Container -->
-<div class="model-container">
-  <model-viewer id="humanModel" src="shocked_fish_animation_state.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate>
-    <button slot="ar-button">View in AR</button>
-  </model-viewer>
-</div>
+        <!-- Dashboard Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-semibold text-gray-800">4D-CXL Pro Analytics Dashboard</h1>
+        </div>
 
-<button class="toggle-btn" onclick="toggleChat()">Toggle Chat</button>
+        <!-- Analytics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Total Visits Card -->
+            <div class="card">
+                <div class="card-header">Total Visits</div>
+                <div class="card-content text-center">
+                    <h2 class="text-2xl font-bold text-blue-600" id="total-visits">1,250</h2>
+                </div>
+                <div class="card-footer">Last 30 Days</div>
+            </div>
 
-<!-- Chatbot Container -->
-<div class="chat-container" id="chat-container">
-  <div class="chat-box" id="chat-box"></div>
-  <input type="text" id="user-input" class="chat-input" placeholder="Ask something...">
-  <button class="send-btn" onclick="sendMessage()">Ask</button>
-</div>
+            <!-- Bounce Rate Card -->
+            <div class="card">
+                <div class="card-header">Bounce Rate</div>
+                <div class="card-content text-center">
+                    <h2 class="text-2xl font-bold text-red-600" id="bounce-rate">45%</h2>
+                </div>
+                <div class="card-footer">Last 30 Days</div>
+            </div>
 
-<script src="script.js"></script>
+            <!-- Conversion Rate Card -->
+            <div class="card">
+                <div class="card-header">Conversion Rate</div>
+                <div class="card-content text-center">
+                    <h2 class="text-2xl font-bold text-green-600" id="conversion-rate">3.5%</h2>
+                </div>
+                <div class="card-footer">Last 30 Days</div>
+            </div>
+        </div>
 
+        <!-- Example Button to Track -->
+        <div class="text-center mt-10">
+            <button id="downloadButton" class="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700">Download Now</button>
+        </div>
+
+        <!-- Analytics Charts Section -->
+        <div class="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Traffic Source Chart -->
+            <div class="card">
+                <div class="card-header">Traffic Source Breakdown</div>
+                <div class="card-content">
+                    <canvas id="trafficSourceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- User Engagement Chart -->
+            <div class="card">
+                <div class="card-header">User Engagement</div>
+                <div class="card-content">
+                    <canvas id="userEngagementChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmap Container -->
+        <div id="heatmap-container"></div>
+    </div>
+
+    <!-- JavaScript to Initialize Charts and Heatmap -->
+    <script>
+        // Sample Traffic Source Data
+        const trafficSourceData = {
+            labels: ['Direct', 'Organic Search', 'Referral', 'Social Media'],
+            datasets: [{
+                data: [40, 25, 20, 15],
+                backgroundColor: ['#4CAF50', '#FFC107', '#2196F3', '#FF5722'],
+            }]
+        };
+
+        // Sample User Engagement Data
+        const engagementData = {
+            labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+            datasets: [{
+                label: 'Active Users',
+                data: [100, 150, 180, 210, 250, 300, 350],
+                borderColor: '#3B82F6',
+                fill: false,
+                tension: 0.4,
+            }]
+        };
+
+        // Initialize Traffic Source Pie Chart
+        const trafficSourceChart = new Chart(document.getElementById('trafficSourceChart'), {
+            type: 'pie',
+            data: trafficSourceData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.label + ': ' + tooltipItem.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize User Engagement Line Chart
+        const userEngagementChart = new Chart(document.getElementById('userEngagementChart'), {
+            type: 'line',
+            data: engagementData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Active Users'
+                        }
+                    }
+                },
+            }
+        });
+
+        // Track Button Click Event for Analytics
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            // Google Analytics Event Tracking
+            gtag('event', 'download_button_click', {
+                'event_category': 'user_interaction',
+                'event_label': 'Download Now Button',
+            });
+            console.log("Download Button Clicked");
+        });
+
+        // Heatmap.js initialization
+        const heatmapInstance = h337.create({
+            container: document.querySelector('#heatmap-container'),
+            maxOpacity: 0.6,
+            radius: 50,
+            blur: 0.90
+        });
+
+        // Add random data points to simulate user clicks for heatmap
+        const generateHeatmapData = () => {
+            let points = [];
+            for (let i = 0; i < 200; i++) {
+                points.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    value: Math.random() * 100
+                });
+            }
+            return points;
+        };
+
+        // Updating the heatmap with simulated data
+        heatmapInstance.setData({
+            max: 100,
+            data: generateHeatmapData()
+        });
+
+        // Real-time Analytics (Update Every 10 Seconds)
+        const updateRealTimeAnalytics = () => {
+            // Simulate data update every 10 seconds (you can replace this with actual data from Google Analytics or backend)
+            document.getElementById('total-visits').innerText = Math.floor(Math.random() * 3000);
+            document.getElementById('bounce-rate').innerText = (Math.random() * 100).toFixed(2) + '%';
+            document.getElementById('conversion-rate').innerText = (Math.random() * 10).toFixed(2) + '%';
+        };
+
+        setInterval(updateRealTimeAnalytics, 10000); // Update data every 10 seconds
+    </script>
 </body>
 </html>
