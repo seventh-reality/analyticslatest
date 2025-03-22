@@ -109,14 +109,14 @@ let chatContainer = document.getElementById("chat-container");
 chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none";
 }
 
-function sendMessage() {
+async function sendMessage() {
 let userMessage = document.getElementById("user-input").value.trim();
 if (!userMessage) return;
 
 let chatBox = document.getElementById("chat-box");
 chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
 
-let botMessage = getBotResponse(userMessage);
+let botMessage = await getBotResponse(userMessage);
 chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
 
 let modelViewer = document.getElementById("humanModel");
@@ -128,42 +128,30 @@ currentAnimation = (currentAnimation + 1) % animations.length;
 
 // Create speech synthesis and handle events
 let utterance = new SpeechSynthesisUtterance(botMessage);
-
-utterance.onstart = () => {
-speaking = true; // Speech has started, animation should continue
-};
-
-utterance.onend = () => {
-speaking = false; // Speech has ended, stop animation
-modelViewer.pause(); // Stop the animation after speech
-};
+utterance.onstart = () => { speaking = true; };
+utterance.onend = () => { speaking = false; modelViewer.pause(); };
 
 speechSynthesis.speak(utterance);
 document.getElementById("user-input").value = "";
 chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function getBotResponse(userMessage) {
-userMessage = userMessage.toLowerCase();
-if (userMessage.includes("hello") || userMessage.includes("hi")) {
-return "Hello! How can I assist you today?";
-} else if (userMessage.includes("ar") || userMessage.includes("model")) {
-return "You can view this 3D model in Augmented Reality using the AR button.";
-} else if (userMessage.includes("how does webar work")) {
-return "WebAR works by using WebGL and WebXR technologies to render 3D models and provide AR experiences directly in the browser.";
-} else if (userMessage.includes("what is webar")) {
-return "WebAR is an augmented reality experience accessible through web browsers without requiring an app installation.";
-} else if (userMessage.includes("benefits of webar")) {
-return "WebAR offers accessibility, no need for app downloads, cross-platform compatibility, and seamless integration with websites.";
-} else if (userMessage.includes("how to interact with the model")) {
-return "You can rotate, zoom, and move the model using touch gestures or mouse controls in the viewer.";
-} else if (userMessage.includes("can i customize the ar experience")) {
-return "Yes! WebAR allows you to customize models, animations, lighting, and interactions to create immersive experiences.";
-} else if (userMessage.includes("difference between ar and webar")) {
-return "AR generally requires an app, while WebAR runs directly in the browser, making it more accessible.";
-} else {
-return "I'm here to help! Ask me about WebAR, model interactions, or AR technologies.";
-}
+async function getBotResponse(userMessage) {
+const apiKey = "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"; // Replace with your actual API key
+const response = await fetch("https://api.openai.com/v1/chat/completions", {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"Authorization": `Bearer ${apiKey}`
+},
+body: JSON.stringify({
+model: "gpt-3.5-turbo",
+messages: [{ role: "user", content: userMessage }]
+})
+});
+
+const data = await response.json();
+return data.choices?.[0]?.message?.content || "Sorry, I couldn't understand that.";
 }
 </script>
 
