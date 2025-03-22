@@ -1,4 +1,4 @@
-const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"; // Replace with your OpenAI API key
+const OPENAI_API_KEY = "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"; // Replace with your OpenAI API key
 
 let animations = ["Idle", "Wave", "Jump"];
 let currentAnimation = 0;
