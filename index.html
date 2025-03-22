@@ -5,79 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WebAR with AI Chatbot</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
-
-<style>
-body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-
-/* Centered 3D Model */
-.model-container {
-display: flex;
-align-items: center;
-justify-content: center;
-width: 100%;
-height: 400px;
-}
-
-model-viewer {
-width: 100%;
-max-width: 600px;
-height: 100%;
-}
-
-/* Chatbot Styles */
-.chat-container {
-position: fixed;
-bottom: 20px;
-right: 20px;
-width: 300px;
-background: #fff;
-padding: 10px;
-border-radius: 10px;
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-display: none;
-}
-
-.chat-box {
-height: 200px;
-overflow-y: auto;
-border-bottom: 1px solid #ddd;
-padding: 5px;
-}
-
-.chat-input {
-width: 100%;
-padding: 8px;
-border-radius: 5px;
-}
-
-.send-btn {
-margin-top: 5px;
-padding: 8px;
-background: #007bff;
-color: white;
-border-radius: 5px;
-cursor: pointer;
-}
-
-.send-btn:hover {
-background: #0056b3;
-}
-
-/* Center button */
-.toggle-btn {
-margin-top: 20px;
-padding: 10px 20px;
-background: #28a745;
-color: white;
-border-radius: 5px;
-cursor: pointer;
-border: none;
-}
-
-.toggle-btn:hover {
-background: #218838;
-}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -85,75 +13,21 @@ background: #218838;
 
 <!-- 3D Model Container -->
 <div class="model-container">
-<model-viewer id="humanModel" src="shocked_fish_animation_state.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate>
-<button slot="ar-button">View in AR</button>
-</model-viewer>
+  <model-viewer id="humanModel" src="shocked_fish_animation_state.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate>
+    <button slot="ar-button">View in AR</button>
+  </model-viewer>
 </div>
 
 <button class="toggle-btn" onclick="toggleChat()">Toggle Chat</button>
 
 <!-- Chatbot Container -->
 <div class="chat-container" id="chat-container">
-<div class="chat-box" id="chat-box"></div>
-<input type="text" id="user-input" class="chat-input" placeholder="Ask something...">
-<button class="send-btn" onclick="sendMessage()">Ask</button>
+  <div class="chat-box" id="chat-box"></div>
+  <input type="text" id="user-input" class="chat-input" placeholder="Ask something...">
+  <button class="send-btn" onclick="sendMessage()">Ask</button>
 </div>
 
-<script>
-let animations = ["Idle", "Wave", "Jump"];
-let currentAnimation = 0;
-let speaking = false;
-
-function toggleChat() {
-let chatContainer = document.getElementById("chat-container");
-chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none";
-}
-
-async function sendMessage() {
-let userMessage = document.getElementById("user-input").value.trim();
-if (!userMessage) return;
-
-let chatBox = document.getElementById("chat-box");
-chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
-
-let botMessage = await getBotResponse(userMessage);
-chatBox.innerHTML += `<p><b>Bot:</b> ${botMessage}</p>`;
-
-let modelViewer = document.getElementById("humanModel");
-
-// Start the animation
-modelViewer.setAttribute("animation-name", animations[currentAnimation]);
-modelViewer.play();
-currentAnimation = (currentAnimation + 1) % animations.length;
-
-// Create speech synthesis and handle events
-let utterance = new SpeechSynthesisUtterance(botMessage);
-utterance.onstart = () => { speaking = true; };
-utterance.onend = () => { speaking = false; modelViewer.pause(); };
-
-speechSynthesis.speak(utterance);
-document.getElementById("user-input").value = "";
-chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-async function getBotResponse(userMessage) {
-const apiKey = "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"; // Replace with your actual API key
-const response = await fetch("https://api.openai.com/v1/chat/completions", {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"Authorization": `Bearer ${apiKey}`
-},
-body: JSON.stringify({
-model: "gpt-3.5-turbo",
-messages: [{ role: "user", content: userMessage }]
-})
-});
-
-const data = await response.json();
-return data.choices?.[0]?.message?.content || "Sorry, I couldn't understand that.";
-}
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
