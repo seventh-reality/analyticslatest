@@ -53,33 +53,64 @@
     </div>
 
     <!-- Video element for the plane -->
-    <video id="alphaVideo" src="Untitled Video (1).mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
+    <video id="alphaVideo" loop muted playsinline style="display: none;" crossorigin="anonymous">
+        <source src="Untitled Video (1).mp4" type="video/mp4">
+    </video>
 
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             const modelViewer = document.getElementById("arViewer");
             const video = document.getElementById("alphaVideo");
+            
+            // Preload the video
+            video.load();
+            
+            modelViewer.addEventListener('load', async () => {
+                console.log("Model loaded");
+            });
 
-            modelViewer.addEventListener('ar-status', (event) => {
+            modelViewer.addEventListener('ar-status', async (event) => {
                 console.log("AR Status:", event.detail.status);
                 if (event.detail.status === 'session-started') {
-                    startSLAMVideo(modelViewer, video);
+                    try {
+                        await startSLAMVideo(modelViewer, video);
+                    } catch (error) {
+                        console.error("Error starting SLAM video:", error);
+                    }
                 }
             });
         });
 
         async function startSLAMVideo(modelViewer, video) {
-            // Wait for the video to load and start playing
-            video.play();
-            await video.oncanplaythrough;  // Ensure video is ready to play
-
             // Wait for the model to be fully loaded
-            await modelViewer.updateComplete; 
+            await modelViewer.updateComplete;
+            
+            // Wait for the video to be ready
+            await new Promise((resolve) => {
+                video.addEventListener('canplaythrough', resolve, { once: true });
+            });
+            
+            try {
+                // Try to play the video
+                await video.play();
+                console.log("Video started playing");
+            } catch (err) {
+                console.error("Video play failed:", err);
+                // Some browsers require user interaction before video can play
+                modelViewer.querySelector('button[slot="ar-button"]').addEventListener('click', async () => {
+                    try {
+                        await video.play();
+                    } catch (e) {
+                        console.error("Still can't play video:", e);
+                    }
+                });
+                return;
+            }
 
-            const scene = modelViewer.model;
-
+            const scene = modelViewer.scene;
+            
             if (!scene) {
-                console.error("Model not found.");
+                console.error("Scene not found.");
                 return;
             }
 
@@ -91,15 +122,28 @@
 
             // Create a plane in Three.js
             const geometry = new THREE.PlaneGeometry(1.5, 1); // Adjust size
-            const material = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
+            const material = new THREE.MeshBasicMaterial({ 
+                map: videoTexture, 
+                transparent: true,
+                side: THREE.DoubleSide
+            });
             const plane = new THREE.Mesh(geometry, material);
 
             // Position the plane in front of the camera
-            plane.position.set(0, 1, -1.5); // Adjust height (y) and distance (z)
+            plane.position.set(0, 0, -1.5); // Adjust height (y) and distance (z)
             plane.rotation.x = -Math.PI / 2; // Rotate to lay flat
 
             // Add the plane to the AR scene
             scene.add(plane);
+
+            // Animation loop to keep the video playing
+            function animate() {
+                requestAnimationFrame(animate);
+                if (videoTexture) {
+                    videoTexture.needsUpdate = true;
+                }
+            }
+            animate();
 
             console.log("Video plane added to AR scene.");
         }
