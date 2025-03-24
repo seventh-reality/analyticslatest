@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Astronaut + Video</title>
+    <title>AR Astronaut with Video</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -40,7 +40,7 @@
     </style>
 </head>
 <body>
-    <h1>AR Astronaut + Video</h1>
+    <h1>AR Astronaut with Video</h1>
     
     <button id="ar-button">Start AR Experience</button>
     <div id="error-message"></div>
@@ -77,11 +77,12 @@
                 return true;
             }
             
-            // Initialize video
+            // Initialize video with autoplay settings
             video.muted = true;
             video.preload = "auto";
             video.playsInline = true;
-            video.load();
+            video.setAttribute('webkit-playsinline', '');
+            video.setAttribute('playsinline', '');
             
             arButton.addEventListener('click', async () => {
                 if (!checkARSupport()) return;
@@ -90,7 +91,13 @@
                     modelViewer.style.display = 'block';
                     arButton.style.display = 'none';
                     
-                    // Start AR session first
+                    // Load video first
+                    video.load();
+                    await new Promise((resolve) => {
+                        video.addEventListener('loadedmetadata', resolve, { once: true });
+                    });
+                    
+                    // Start AR session
                     nativeARButton.click();
                     
                     // Set up AR scene when session starts
@@ -126,7 +133,7 @@
                 videoTexture.magFilter = THREE.LinearFilter;
                 
                 // Create video plane (16:9 aspect ratio)
-                const videoWidth = 1.5;
+                const videoWidth = 1.2;
                 const videoHeight = videoWidth * (9/16);
                 const videoGeometry = new THREE.PlaneGeometry(videoWidth, videoHeight);
                 const videoMaterial = new THREE.MeshBasicMaterial({
@@ -136,26 +143,36 @@
                 });
                 
                 const videoPlane = new THREE.Mesh(videoGeometry, videoMaterial);
-                videoPlane.position.set(1.5, 0.5, -2); // Right side
-                videoPlane.rotation.x = -Math.PI / 2; // Lay flat
                 
-                // Position astronaut to left
+                // Find astronaut position and place video at same location
                 const astronaut = findAstronaut(scene);
                 if (astronaut) {
-                    astronaut.position.set(-1.5, 0, -2);
-                    astronaut.scale.set(0.8, 0.8, 0.8);
+                    // Get astronaut position and place video at same spot
+                    videoPlane.position.copy(astronaut.position);
+                    videoPlane.position.y += 0.2; // Slightly above astronaut
+                    videoPlane.rotation.x = -Math.PI / 2; // Lay flat
+                    
+                    // Scale astronaut to match video size
+                    astronaut.scale.set(0.7, 0.7, 0.7);
+                } else {
+                    // Default position if astronaut not found
+                    videoPlane.position.set(0, 0.5, -1.5);
+                    videoPlane.rotation.x = -Math.PI / 2;
                 }
                 
                 // Add video plane to scene
                 scene.add(videoPlane);
                 
-                // Start video playback
-                await video.play().catch(e => {
-                    console.log("Video play failed, adding click handler:", e);
-                    modelViewer.addEventListener('click', () => {
-                        video.play().catch(e => console.log("Click play failed:", e));
-                    }, { once: true });
-                });
+                // Start video playback with multiple attempts
+                let playAttempt = setInterval(() => {
+                    video.play()
+                        .then(() => {
+                            clearInterval(playAttempt);
+                        })
+                        .catch(error => {
+                            console.log("Attempting to play video...");
+                        });
+                }, 500);
                 
                 // Animation loop for video texture
                 function animate() {
@@ -166,6 +183,11 @@
                 }
                 animate();
                 
+                // Click fallback for strict browsers
+                modelViewer.addEventListener('click', () => {
+                    video.play().catch(e => console.log("Click play failed:", e));
+                });
+                
             } catch (error) {
                 console.error("Scene Error:", error);
                 errorMessage.textContent = "Scene setup failed: " + error.message;
@@ -174,12 +196,13 @@
         }
         
         function findAstronaut(scene) {
+            let astronautMesh = null;
             scene.traverse(child => {
                 if (child.isMesh && child.name.includes('Astronaut')) {
-                    return child;
+                    astronautMesh = child;
                 }
             });
-            return null;
+            return astronautMesh;
         }
     </script>
 </body>
