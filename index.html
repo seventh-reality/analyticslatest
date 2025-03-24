@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WebAR SLAM Video with Model-Viewer</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
 body {
@@ -50,7 +51,7 @@ model-viewer {
     </model-viewer>
 </div>
 
-<video id="alphaVideo" src="alpha-video.webm" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
+<video id="alphaVideo" src="video.mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -74,7 +75,6 @@ function startSLAMVideo(modelViewer, video) {
         if (planeMesh) {
             const texture = new THREE.VideoTexture(video);
             texture.encoding = THREE.sRGBEncoding;
-            texture.format = THREE.RGBAFormat;
             texture.minFilter = THREE.LinearFilter;
             texture.magFilter = THREE.LinearFilter;
             
