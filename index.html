@@ -1,116 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR SLAM Video on Plane</title>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR SLAM Video on Plane</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<style>
-body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background: #f0f0f0;
-}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #f0f0f0;
+        }
 
-.model-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 400px;
-}
+        .model-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 400px;
+        }
 
-model-viewer {
-    width: 100%;
-    max-width: 600px;
-    height: 100%;
-}
-</style>
+        model-viewer {
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
 
-<h1>WebAR SLAM Video on Plane</h1>
+    <h1>WebAR SLAM Video on Plane</h1>
 
-<div class="model-container">
-    <model-viewer id="arViewer" 
-        src="pl.glb" 
-        ar 
-        ar-modes="webxr scene-viewer quick-look"
-        camera-controls 
-        auto-rotate
-        disable-pan>
-        <button slot="ar-button">View in AR</button>
-    </model-viewer>
-</div>
+    <div class="model-container">
+        <model-viewer id="arViewer" 
+            src="pl.glb" 
+            ar 
+            ar-modes="webxr scene-viewer quick-look"
+            camera-controls 
+            auto-rotate
+            disable-pan>
+            <button slot="ar-button">View in AR</button>
+        </model-viewer>
+    </div>
 
-<!-- Video element for the plane -->
-<video id="alphaVideo" src="Untitled Video (1).mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
+    <!-- Video element for the plane -->
+    <video id="alphaVideo" src="Untitled Video (1).mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const modelViewer = document.getElementById("arViewer");
-    const video = document.getElementById("alphaVideo");
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modelViewer = document.getElementById("arViewer");
+            const video = document.getElementById("alphaVideo");
 
-    modelViewer.addEventListener('ar-status', (event) => {
-        console.log("AR Status:", event.detail.status);
-        if (event.detail.status === 'session-started') {
-            startSLAMVideo(modelViewer, video);
+            modelViewer.addEventListener('ar-status', (event) => {
+                console.log("AR Status:", event.detail.status);
+                if (event.detail.status === 'session-started') {
+                    startSLAMVideo(modelViewer, video);
+                }
+            });
+        });
+
+        async function startSLAMVideo(modelViewer, video) {
+            // Wait for the video to load and start playing
+            video.play();
+            await video.oncanplaythrough;  // Ensure video is ready to play
+
+            // Wait for the model to be fully loaded
+            await modelViewer.updateComplete; 
+
+            const scene = modelViewer.model;
+
+            if (!scene) {
+                console.error("Model not found.");
+                return;
+            }
+
+            // Create a Three.js video texture
+            const videoTexture = new THREE.VideoTexture(video);
+            videoTexture.encoding = THREE.sRGBEncoding;
+            videoTexture.minFilter = THREE.LinearFilter;
+            videoTexture.magFilter = THREE.LinearFilter;
+
+            // Create a plane in Three.js
+            const geometry = new THREE.PlaneGeometry(1.5, 1); // Adjust size
+            const material = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
+            const plane = new THREE.Mesh(geometry, material);
+
+            // Position the plane in front of the camera
+            plane.position.set(0, 1, -1.5); // Adjust height (y) and distance (z)
+            plane.rotation.x = -Math.PI / 2; // Rotate to lay flat
+
+            // Add the plane to the AR scene
+            scene.add(plane);
+
+            console.log("Video plane added to AR scene.");
         }
-    });
-});
-
-async function startSLAMVideo(modelViewer, video) {
-    video.play();
-    await modelViewer.updateComplete; // Ensure model is loaded before modifying
-
-    const scene = modelViewer.model;
-
-    if (!scene) {
-        console.error("Model not found.");
-        return;
-    }
-
-    // Create a Three.js video texture
-    const videoTexture = new THREE.VideoTexture(video);
-    videoTexture.encoding = THREE.sRGBEncoding;
-    videoTexture.minFilter = THREE.LinearFilter;
-    videoTexture.magFilter = THREE.LinearFilter;
-
-    // Create a plane in Three.js
-    const geometry = new THREE.PlaneGeometry(1.5, 1); // Adjust size
-    const material = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
-    const plane = new THREE.Mesh(geometry, material);
-
-    // Position the plane in front of the camera
-    plane.position.set(0, 1, -1.5); // Adjust height (y) and distance (z)
-    plane.rotation.x = -Math.PI / 2; // Rotate to lay flat
-
-    // Add the plane to the AR scene
-    scene.add(plane);
-
-    // Update video texture on each frame
-    function updateTexture() {
-        if (video.readyState >= video.HAVE_CURRENT_DATA) {
-            videoTexture.needsUpdate = true;
-        }
-        requestAnimationFrame(updateTexture);
-    }
-
-    // Start the texture update loop
-    updateTexture();
-
-    console.log("Video plane added to AR scene.");
-}
-</script>
+    </script>
 
 </body>
 </html>
