@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WebAR SLAM Video on Plane</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
 body {
@@ -42,17 +41,18 @@ model-viewer {
 
 <div class="model-container">
     <model-viewer id="arViewer" 
-        src="scene.glb" 
+        src="CT_Room.glb" 
         ar 
-        ar-modes="webxr scene-viewer quick-look" 
+        ar-modes="webxr scene-viewer quick-look"
         camera-controls 
-        auto-rotate>
+        auto-rotate
+        disable-pan>
         <button slot="ar-button">View in AR</button>
     </model-viewer>
 </div>
 
 <!-- Video element for the plane -->
-<video id="alphaVideo" src="Untitled Video (1).mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
+<video id="alphaVideo" src="video.mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -60,37 +60,32 @@ document.addEventListener("DOMContentLoaded", () => {
     const video = document.getElementById("alphaVideo");
 
     modelViewer.addEventListener('ar-status', (event) => {
+        console.log("AR Status:", event.detail.status);
         if (event.detail.status === 'session-started') {
             startSLAMVideo(modelViewer, video);
         }
     });
 });
 
-function startSLAMVideo(modelViewer, video) {
+async function startSLAMVideo(modelViewer, video) {
     video.play();
-    
-    modelViewer.addEventListener("load", async () => {
-        const scene = modelViewer.model;
-        
-        if (!scene) {
-            console.error("Model not found.");
-            return;
-        }
 
-        // Create a Three.js plane for video
-        const videoTexture = new THREE.VideoTexture(video);
-        videoTexture.encoding = THREE.sRGBEncoding;
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        
-        const geometry = new THREE.PlaneGeometry(1.5, 1); // Adjust plane size
-        const material = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
-        const plane = new THREE.Mesh(geometry, material);
-        
-        plane.position.set(0, 0, 0);
-        scene.add(plane);
-    });
+    await modelViewer.updateComplete; // Ensure model is loaded before modifying
+
+    const material = modelViewer.model.materials.find(m => m.name === "videoPlane");
+    
+    if (!material) {
+        console.error("Material named 'videoPlane' not found in GLB. Make sure your GLB contains a named plane.");
+        return;
+    }
+
+    // Create a video texture and apply it to the plane
+    const videoTexture = new modelViewer.texture(video);
+    material.pbrMetallicRoughness.baseColorTexture.set(videoTexture);
+
+    console.log("Video texture applied to plane.");
 }
 </script>
+
 </body>
 </html>
