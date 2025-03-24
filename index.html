@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR with Video on Plane</title>
+<title>WebAR SLAM Video with Model-Viewer</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
 
 <style>
@@ -37,35 +37,34 @@ model-viewer {
 </head>
 <body>
 
-<h1>WebAR with Video Texture on Plane</h1>
+<h1>WebAR SLAM Video on Plane</h1>
 
 <div class="model-container">
     <model-viewer id="arViewer" 
-        src="john_mcstrong.glb" 
+        src="scene.glb" 
         ar 
         ar-modes="webxr scene-viewer quick-look" 
         camera-controls 
-        auto-rotate
-        exposure="1">
+        auto-rotate>
         <button slot="ar-button">View in AR</button>
     </model-viewer>
 </div>
 
-<video id="videoTexture" src="Untitled Video (1).mp4" loop muted playsinline></video>
+<video id="alphaVideo" src="alpha-video.webm" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const modelViewer = document.getElementById("arViewer");
-    const video = document.getElementById("videoTexture");
+    const video = document.getElementById("alphaVideo");
     
     modelViewer.addEventListener('ar-status', (event) => {
         if (event.detail.status === 'session-started') {
-            startVideoTexture(modelViewer, video);
+            startSLAMVideo(modelViewer, video);
         }
     });
 });
 
-function startVideoTexture(modelViewer, video) {
+function startSLAMVideo(modelViewer, video) {
     video.play();
     
     modelViewer.addEventListener("load", () => {
@@ -75,6 +74,10 @@ function startVideoTexture(modelViewer, video) {
         if (planeMesh) {
             const texture = new THREE.VideoTexture(video);
             texture.encoding = THREE.sRGBEncoding;
+            texture.format = THREE.RGBAFormat;
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            
             planeMesh.pbrMetallicRoughness.baseColorTexture.set(texture);
         }
     });
