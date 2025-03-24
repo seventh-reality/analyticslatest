@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Video in AR Space</title>
+    <title>AR Surface Tracking with Video</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -37,13 +37,19 @@
             margin-top: 10px;
             display: none;
         }
+        #plane-detection-message {
+            color: #4285f4;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <h1>3D Video in AR Space</h1>
+    <h1>AR Surface Tracking with Video</h1>
     
     <button id="ar-button">Start AR Experience</button>
     <div id="error-message"></div>
+    <div id="plane-detection-message">Move your device to detect surfaces...</div>
     
     <model-viewer id="arViewer" 
         ar 
@@ -53,12 +59,11 @@
         environment-image="neutral"
         src="https://modelviewer.dev/shared-assets/models/Astronaut.glb">
         <button slot="ar-button" id="native-ar-button" style="display: none;"></button>
-        <video id="alphaVideo" loop playsinline muted crossorigin="anonymous" style="display: none;">
-        <source src="Video.mp4" type="video/mp4">
-    </video>
     </model-viewer>
 
-    
+    <video id="alphaVideo" loop playsinline muted crossorigin="anonymous" style="display: none;">
+        <source src="Video.mp4" type="video/mp4">
+    </video>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -66,7 +71,12 @@
             const video = document.getElementById("alphaVideo");
             const arButton = document.getElementById("ar-button");
             const errorMessage = document.getElementById("error-message");
+            const planeMessage = document.getElementById("plane-detection-message");
             const nativeARButton = document.getElementById("native-ar-button");
+            
+            let videoPlane = null;
+            let astronaut = null;
+            let animationId = null;
             
             // Check AR support
             function checkARSupport() {
@@ -91,6 +101,7 @@
                 try {
                     modelViewer.style.display = 'block';
                     arButton.style.display = 'none';
+                    planeMessage.style.display = 'block';
                     
                     // Load video first
                     video.load();
@@ -117,6 +128,17 @@
                     errorMessage.style.display = 'block';
                 }
             });
+            
+            // Clean up on exit
+            modelViewer.addEventListener('ar-status', (event) => {
+                if (event.detail.status === 'session-ended') {
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                    planeMessage.style.display = 'none';
+                }
+            });
         });
 
         async function setupARScene(modelViewer, video) {
@@ -133,8 +155,8 @@
                 videoTexture.minFilter = THREE.LinearFilter;
                 videoTexture.magFilter = THREE.LinearFilter;
                 
-                // Create 3D video screen (16:9 aspect ratio)
-                const videoWidth = 1.0;
+                // Create plane for video (16:9 aspect ratio)
+                const videoWidth = 1.2;
                 const videoHeight = videoWidth * (9/16);
                 const videoGeometry = new THREE.PlaneGeometry(videoWidth, videoHeight);
                 const videoMaterial = new THREE.MeshBasicMaterial({
@@ -143,52 +165,106 @@
                     transparent: false
                 });
                 
-                const videoScreen = new THREE.Mesh(videoGeometry, videoMaterial);
+                videoPlane = new THREE.Mesh(videoGeometry, videoMaterial);
+                videoPlane.visible = false; // Hide until plane is detected
                 
-                // Position video screen next to astronaut in 3D space
-                videoScreen.position.set(1.0, 0.5, -1.5); // Right side of astronaut
-                videoScreen.rotation.y = Math.PI / 8; // Slight angle for better viewing
-                
-                // Find astronaut and adjust position
-                const astronaut = findAstronaut(scene);
+                // Find and position astronaut
+                astronaut = findAstronaut(scene);
                 if (astronaut) {
-                    astronaut.position.set(-0.5, 0, -1.5); // Left side
+                    astronaut.visible = false; // Hide until plane is detected
                     astronaut.scale.set(0.6, 0.6, 0.6);
                 }
                 
-                // Add video screen to scene
-                scene.add(videoScreen);
+                // Add video plane to scene
+                scene.add(videoPlane);
                 
-                // Start video playback with multiple attempts
-                let playAttempt = setInterval(() => {
-                    video.play()
-                        .then(() => {
-                            clearInterval(playAttempt);
-                        })
-                        .catch(error => {
-                            console.log("Attempting to play video...");
-                        });
-                }, 300);
+                // Start video playback
+                await startVideoPlayback(video);
                 
-                // Animation loop for video texture
-                function animate() {
-                    requestAnimationFrame(animate);
-                    if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-                        videoTexture.needsUpdate = true;
-                    }
-                }
-                animate();
-                
-                // Click fallback for strict browsers
-                modelViewer.addEventListener('click', () => {
-                    video.play().catch(e => console.log("Click play failed:", e));
-                });
+                // Set up plane detection
+                setupPlaneDetection(modelViewer, videoPlane, astronaut);
                 
             } catch (error) {
                 console.error("Scene Error:", error);
                 errorMessage.textContent = "Scene setup failed: " + error.message;
                 errorMessage.style.display = 'block';
             }
+        }
+        
+        function setupPlaneDetection(modelViewer, videoPlane, astronaut) {
+            const scene = modelViewer.scene;
+            const planeMessage = document.getElementById("plane-detection-message");
+            let planeDetected = false;
+            
+            // Animation loop for plane detection
+            function checkForPlanes() {
+                animationId = requestAnimationFrame(checkForPlanes);
+                
+                // Get all planes in the scene
+                const planes = [];
+                scene.traverse(child => {
+                    if (child.userData.isARPlane) {
+                        planes.push(child);
+                    }
+                });
+                
+                if (planes.length > 0 && !planeDetected) {
+                    planeDetected = true;
+                    planeMessage.style.display = 'none';
+                    
+                    // Use the first detected plane
+                    const detectedPlane = planes[0];
+                    
+                    // Position video and astronaut on the plane
+                    const planePosition = detectedPlane.position.clone();
+                    const planeRotation = detectedPlane.rotation.clone();
+                    
+                    // Position video plane slightly above detected surface
+                    videoPlane.position.copy(planePosition);
+                    videoPlane.position.y += 0.01; // Slightly above to avoid z-fighting
+                    videoPlane.rotation.copy(planeRotation);
+                    videoPlane.rotation.x = 0; // Make it stand up
+                    videoPlane.visible = true;
+                    
+                    // Position astronaut next to video
+                    if (astronaut) {
+                        astronaut.position.copy(planePosition);
+                        astronaut.position.x -= 0.8; // Move left
+                        astronaut.position.y += 0.01; // Slightly above
+                        astronaut.rotation.copy(planeRotation);
+                        astronaut.rotation.x = 0;
+                        astronaut.visible = true;
+                    }
+                }
+            }
+            
+            checkForPlanes();
+        }
+        
+        async function startVideoPlayback(video) {
+            // Try to play immediately
+            try {
+                await video.play();
+                return;
+            } catch (e) {
+                console.log("Initial play failed, retrying...");
+            }
+            
+            // Retry every 300ms if failed
+            let playAttempt = setInterval(() => {
+                video.play()
+                    .then(() => {
+                        clearInterval(playAttempt);
+                    })
+                    .catch(error => {
+                        console.log("Attempting to play video...");
+                    });
+            }, 300);
+            
+            // Click fallback
+            document.addEventListener('click', () => {
+                video.play().catch(e => console.log("Click play failed:", e));
+            }, { once: true });
         }
         
         function findAstronaut(scene) {
