@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WebAR SLAM Video on Plane</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
 body {
@@ -71,19 +72,32 @@ async function startSLAMVideo(modelViewer, video) {
     video.play();
     await modelViewer.updateComplete; // Ensure model is loaded before modifying
 
-    // Find the material assigned to the plane
-    const material = modelViewer.model.materials.find(m => m.name === "videoPlane");
-    
-    if (!material) {
-        console.error("Material named 'videoPlane' not found in GLB. Make sure your GLB contains a named plane.");
+    const scene = modelViewer.model;
+
+    if (!scene) {
+        console.error("Model not found.");
         return;
     }
 
-    // Create a video texture and apply it
-    const videoTexture = new modelViewer.createTexture(video);
-    material.pbrMetallicRoughness.setBaseColorTexture(videoTexture);
+    // Create a Three.js video texture
+    const videoTexture = new THREE.VideoTexture(video);
+    videoTexture.encoding = THREE.sRGBEncoding;
+    videoTexture.minFilter = THREE.LinearFilter;
+    videoTexture.magFilter = THREE.LinearFilter;
 
-    console.log("Video texture applied to plane.");
+    // Create a plane in Three.js
+    const geometry = new THREE.PlaneGeometry(1.5, 1); // Adjust size
+    const material = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
+    const plane = new THREE.Mesh(geometry, material);
+
+    // Position the plane in front of the camera
+    plane.position.set(0, 1, -1.5); // Adjust height (y) and distance (z)
+    plane.rotation.x = -Math.PI / 2; // Rotate to lay flat
+
+    // Add the plane to the AR scene
+    scene.add(plane);
+
+    console.log("Video plane added to AR scene.");
 }
 </script>
 
