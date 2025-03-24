@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebAR Video on Plane</title>
+    <title>AR Video + Astronaut</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -40,7 +40,7 @@
     </style>
 </head>
 <body>
-    <h1>WebAR Video on Plane</h1>
+    <h1>AR Video + Astronaut</h1>
     
     <button id="ar-button">Start AR Experience</button>
     <div id="error-message"></div>
@@ -56,7 +56,7 @@
     </model-viewer>
 
     <video id="alphaVideo" loop playsinline muted crossorigin="anonymous" style="display: none;">
-        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+        <source src="your-video.mp4" type="video/mp4">
     </video>
 
     <script>
@@ -77,9 +77,13 @@
                 return true;
             }
             
-            // 2. Initialize video
+            // 2. Initialize video - critical changes for autoplay
             video.muted = true;
             video.preload = "auto";
+            video.playsInline = true;
+            
+            // Preload video immediately
+            video.load();
             
             arButton.addEventListener('click', async () => {
                 if (!checkARSupport()) return;
@@ -89,15 +93,20 @@
                     modelViewer.style.display = 'block';
                     arButton.style.display = 'none';
                     
-                    // 3. Trigger the native AR button programmatically
+                    // Start video playback before AR starts
+                    await video.play().catch(e => {
+                        console.log("Initial play attempt failed, will try in AR:", e);
+                    });
+                    
+                    // Trigger the native AR button programmatically
                     nativeARButton.click();
                     
-                    // 4. Set up AR session handler
+                    // Set up AR session handler
                     modelViewer.addEventListener('ar-status', (event) => {
                         console.log('AR Status:', event.detail.status);
                         
                         if (event.detail.status === 'session-started') {
-                            setupARVideo(modelViewer, video);
+                            setupARContent(modelViewer, video);
                         } else if (event.detail.status === 'failed') {
                             errorMessage.textContent = "Failed to start AR session. Make sure your device supports AR.";
                             errorMessage.style.display = 'block';
@@ -112,7 +121,7 @@
             });
         });
 
-        function setupARVideo(modelViewer, video) {
+        function setupARContent(modelViewer, video) {
             try {
                 // Get the Three.js scene
                 const scene = modelViewer.scene;
@@ -120,28 +129,36 @@
                     throw new Error("Could not access Three.js scene");
                 }
                 
-                // Create video texture
+                // 1. Create video plane
                 const videoTexture = new THREE.VideoTexture(video);
                 videoTexture.encoding = THREE.sRGBEncoding;
                 videoTexture.minFilter = THREE.LinearFilter;
                 videoTexture.magFilter = THREE.LinearFilter;
                 
-                // Create plane geometry (16:9 aspect ratio)
-                const geometry = new THREE.PlaneGeometry(1.6, 0.9);
-                const material = new THREE.MeshBasicMaterial({
+                const videoGeometry = new THREE.PlaneGeometry(1.6, 0.9);
+                const videoMaterial = new THREE.MeshBasicMaterial({
                     map: videoTexture,
                     transparent: true,
                     side: THREE.DoubleSide
                 });
                 
-                const plane = new THREE.Mesh(geometry, material);
-                plane.position.set(0, 0, -1.5);
-                plane.rotation.x = -Math.PI / 2;
+                const videoPlane = new THREE.Mesh(videoGeometry, videoMaterial);
+                videoPlane.position.set(1.5, 0, -2); // Position to the right
+                videoPlane.rotation.x = -Math.PI / 2;
                 
-                // Add plane to scene
-                scene.add(plane);
+                // 2. Find and position the Astronaut model
+                modelViewer.addEventListener('load', () => {
+                    const astronaut = scene.getObjectByName('Astronaut');
+                    if (astronaut) {
+                        astronaut.position.set(-1.5, 0, -2); // Position to the left
+                        astronaut.scale.set(0.8, 0.8, 0.8);
+                    }
+                });
                 
-                // Animation loop
+                // Add video plane to scene
+                scene.add(videoPlane);
+                
+                // Animation loop to update video texture
                 function animate() {
                     requestAnimationFrame(animate);
                     if (video.readyState >= video.HAVE_ENOUGH_DATA) {
@@ -150,8 +167,16 @@
                 }
                 animate();
                 
-                // Ensure video plays
-                video.play().catch(e => console.log("Video play error:", e));
+                // Final video play attempt in AR mode
+                setTimeout(() => {
+                    video.play().catch(e => {
+                        console.log("Final play attempt failed:", e);
+                        // Add click-to-play fallback
+                        modelViewer.addEventListener('click', () => {
+                            video.play().catch(e => console.log("Click play failed:", e));
+                        }, { once: true });
+                    });
+                }, 1000);
                 
             } catch (error) {
                 console.error("AR setup error:", error);
