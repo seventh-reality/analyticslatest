@@ -3,170 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR with AI Chatbot</title>
+<title>WebAR with Video on Plane</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
 
 <style>
-body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #f0f0f0;
+}
 
 .model-container {
-display: flex;
-align-items: center;
-justify-content: center;
-width: 100%;
-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 400px;
 }
 
 model-viewer {
-width: 100%;
-max-width: 600px;
-height: 100%;
-}
-
-.chat-container {
-position: fixed;
-bottom: 20px;
-right: 20px;
-width: 300px;
-background: #fff;
-padding: 10px;
-border-radius: 10px;
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-display: none;
-}
-
-.chat-box {
-height: 200px;
-overflow-y: auto;
-border-bottom: 1px solid #ddd;
-padding: 5px;
-}
-
-.chat-input {
-width: 100%;
-padding: 8px;
-border-radius: 5px;
-}
-
-.send-btn {
-margin-top: 5px;
-padding: 8px;
-background: #007bff;
-color: white;
-border-radius: 5px;
-cursor: pointer;
-}
-
-.send-btn:hover {
-background: #0056b3;
-}
-
-.toggle-btn {
-margin-top: 20px;
-padding: 10px 20px;
-background: #28a745;
-color: white;
-border-radius: 5px;
-cursor: pointer;
-border: none;
-}
-
-.toggle-btn:hover {
-background: #218838;
+    width: 100%;
+    max-width: 600px;
+    height: 100%;
 }
 </style>
 </head>
 <body>
 
-<h1>WebAR with AI Chatbot</h1>
+<h1>WebAR with Video Texture on Plane</h1>
 
 <div class="model-container">
-<model-viewer id="humanModel" src="john_mcstrong.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate>
-<button slot="ar-button">View in AR</button>
-</model-viewer>
+    <model-viewer id="arViewer" 
+        src="scene.glb" 
+        ar 
+        ar-modes="webxr scene-viewer quick-look" 
+        camera-controls 
+        auto-rotate
+        exposure="1">
+        <button slot="ar-button">View in AR</button>
+    </model-viewer>
 </div>
 
-<video id="videoTexture" src="Untitled Video (1).mp4" loop muted playsinline></video>
-<button class="toggle-btn" onclick="toggleChat()">Toggle Chat</button>
-
-<div class="chat-container" id="chat-container">
-<div class="chat-box" id="chat-box"></div>
-<input type="text" id="user-input" class="chat-input" placeholder="Ask about Agappe CXL Pro...">
-<button class="send-btn" onclick="sendMessage()">Ask</button>
-</div>
+<video id="videoTexture" src="video.mp4" loop muted playsinline></video>
 
 <script>
-let animations = ["Idle", "Wave", "Jump"];
-let currentAnimation = 0;
-let speaking = false;
-
-function toggleChat() {
-    let chatContainer = document.getElementById("chat-container");
-    chatContainer.style.display = chatContainer.style.display === "none" ? "block" : "none";
-}
-
-function sendMessage() {
-    let userMessage = document.getElementById("user-input").value.trim();
-    if (!userMessage) return;
-
-    let chatBox = document.getElementById("chat-box");
-    chatBox.innerHTML += `<p><b>You:</b> ${userMessage}</p>`;
-
-    let botResponses = getBotResponses(userMessage);
-    botResponses.forEach(response => {
-        chatBox.innerHTML += `<p><b>Bot:</b> ${response}</p>`;
-    });
-
-    let modelViewer = document.getElementById("humanModel");
-    modelViewer.setAttribute("animation-name", animations[currentAnimation]);
-    modelViewer.play();
-    currentAnimation = (currentAnimation + 1) % animations.length;
-
-    let utterance = new SpeechSynthesisUtterance(botResponses.join(" "));
-    utterance.onstart = () => { speaking = true; };
-    utterance.onend = () => { speaking = false; modelViewer.pause(); };
-    speechSynthesis.speak(utterance);
-
-    document.getElementById("user-input").value = "";
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function getBotResponses(userMessage) {
-    userMessage = userMessage.toLowerCase();
-    let responses = [];
-
-    if (userMessage.includes("hello") || userMessage.includes("hi")) {
-        responses.push("Hello! How can I assist you regarding Agappe CXL Pro?");
-    }
-    if (userMessage.includes("agappe") || userMessage.includes("cxl pro")) {
-        responses.push("The Agappe CXL Pro is a cutting-edge medical device used for corneal cross-linking.");
-    }
-    if (userMessage.includes("features")) {
-        responses.push("It includes features like precise UV light control, real-time monitoring, and customizable settings for different treatments.");
-    }
-    if (userMessage.includes("benefits")) {
-        responses.push("Agappe CXL Pro enhances corneal strength, prevents disease progression, and improves long-term vision outcomes.");
-    }
-    if (userMessage.includes("usage")) {
-        responses.push("It is commonly used in ophthalmology for treating keratoconus and post-LASIK ectasia.");
-    }
-    if (userMessage.includes("contact") || userMessage.includes("buy")) {
-        responses.push("For purchasing or inquiries, visit Agappe Diagnostics' official website or contact their sales team.");
-    }
+document.addEventListener("DOMContentLoaded", () => {
+    const modelViewer = document.getElementById("arViewer");
+    const video = document.getElementById("videoTexture");
     
-    if (responses.length === 0) {
-        responses.push("I'm here to help! Ask me about Agappe CXL Pro.");
-    }
-    return responses;
-}
-
-document.getElementById("humanModel").addEventListener("ar-status", (event) => {
-    if (event.detail.status === "session-started") {
-        let video = document.getElementById("videoTexture");
-        video.play();
-    }
+    modelViewer.addEventListener('ar-status', (event) => {
+        if (event.detail.status === 'session-started') {
+            startVideoTexture(modelViewer, video);
+        }
+    });
 });
-</script>
 
+function startVideoTexture(modelViewer, video) {
+    video.play();
+    
+    modelViewer.addEventListener("load", () => {
+        const scene = modelViewer.model;
+        const planeMesh = scene.getMaterialByName("videoPlane");
+        
+        if (planeMesh) {
+            const texture = new THREE.VideoTexture(video);
+            texture.encoding = THREE.sRGBEncoding;
+            planeMesh.pbrMetallicRoughness.baseColorTexture.set(texture);
+        }
+    });
+}
+</script>
 </body>
 </html>
