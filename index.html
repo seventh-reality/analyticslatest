@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Astronaut with Video</title>
+    <title>3D Video in AR Space</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -40,7 +40,7 @@
     </style>
 </head>
 <body>
-    <h1>AR Astronaut with Video</h1>
+    <h1>3D Video in AR Space</h1>
     
     <button id="ar-button">Start AR Experience</button>
     <div id="error-message"></div>
@@ -132,36 +132,31 @@
                 videoTexture.minFilter = THREE.LinearFilter;
                 videoTexture.magFilter = THREE.LinearFilter;
                 
-                // Create video plane (16:9 aspect ratio)
-                const videoWidth = 1.2;
+                // Create 3D video screen (16:9 aspect ratio)
+                const videoWidth = 1.0;
                 const videoHeight = videoWidth * (9/16);
                 const videoGeometry = new THREE.PlaneGeometry(videoWidth, videoHeight);
                 const videoMaterial = new THREE.MeshBasicMaterial({
                     map: videoTexture,
                     side: THREE.DoubleSide,
-                    transparent: true
+                    transparent: false
                 });
                 
-                const videoPlane = new THREE.Mesh(videoGeometry, videoMaterial);
+                const videoScreen = new THREE.Mesh(videoGeometry, videoMaterial);
                 
-                // Find astronaut position and place video at same location
+                // Position video screen next to astronaut in 3D space
+                videoScreen.position.set(1.0, 0.5, -1.5); // Right side of astronaut
+                videoScreen.rotation.y = Math.PI / 8; // Slight angle for better viewing
+                
+                // Find astronaut and adjust position
                 const astronaut = findAstronaut(scene);
                 if (astronaut) {
-                    // Get astronaut position and place video at same spot
-                    videoPlane.position.copy(astronaut.position);
-                    videoPlane.position.y += 0.2; // Slightly above astronaut
-                    videoPlane.rotation.x = -Math.PI / 2; // Lay flat
-                    
-                    // Scale astronaut to match video size
-                    astronaut.scale.set(0.7, 0.7, 0.7);
-                } else {
-                    // Default position if astronaut not found
-                    videoPlane.position.set(0, 0.5, -1.5);
-                    videoPlane.rotation.x = -Math.PI / 2;
+                    astronaut.position.set(-0.5, 0, -1.5); // Left side
+                    astronaut.scale.set(0.6, 0.6, 0.6);
                 }
                 
-                // Add video plane to scene
-                scene.add(videoPlane);
+                // Add video screen to scene
+                scene.add(videoScreen);
                 
                 // Start video playback with multiple attempts
                 let playAttempt = setInterval(() => {
@@ -172,7 +167,7 @@
                         .catch(error => {
                             console.log("Attempting to play video...");
                         });
-                }, 500);
+                }, 300);
                 
                 // Animation loop for video texture
                 function animate() {
