@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR SLAM Video with Model-Viewer</title>
+<title>WebAR SLAM Video on Plane</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -51,13 +51,14 @@ model-viewer {
     </model-viewer>
 </div>
 
-<video id="alphaVideo" src="Untitled Video (1).mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
+<!-- Video element for the plane -->
+<video id="alphaVideo" src="video.mp4" loop muted playsinline style="display: none;" crossorigin="anonymous"></video>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const modelViewer = document.getElementById("arViewer");
     const video = document.getElementById("alphaVideo");
-    
+
     modelViewer.addEventListener('ar-status', (event) => {
         if (event.detail.status === 'session-started') {
             startSLAMVideo(modelViewer, video);
@@ -68,18 +69,26 @@ document.addEventListener("DOMContentLoaded", () => {
 function startSLAMVideo(modelViewer, video) {
     video.play();
     
-    modelViewer.addEventListener("load", () => {
+    modelViewer.addEventListener("load", async () => {
         const scene = modelViewer.model;
-        const planeMesh = scene.getMaterialByName("videoPlane");
         
-        if (planeMesh) {
-            const texture = new THREE.VideoTexture(video);
-            texture.encoding = THREE.sRGBEncoding;
-            texture.minFilter = THREE.LinearFilter;
-            texture.magFilter = THREE.LinearFilter;
-            
-            planeMesh.pbrMetallicRoughness.baseColorTexture.set(texture);
+        if (!scene) {
+            console.error("Model not found.");
+            return;
         }
+
+        // Create a Three.js plane for video
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.encoding = THREE.sRGBEncoding;
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        
+        const geometry = new THREE.PlaneGeometry(1.5, 1); // Adjust plane size
+        const material = new THREE.MeshBasicMaterial({ map: videoTexture, transparent: true });
+        const plane = new THREE.Mesh(geometry, material);
+        
+        plane.position.set(0, 0, 0);
+        scene.add(plane);
     });
 }
 </script>
