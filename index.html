@@ -97,6 +97,17 @@ async function startSLAMVideo(modelViewer, video) {
     // Add the plane to the AR scene
     scene.add(plane);
 
+    // Update video texture on each frame
+    function updateTexture() {
+        if (video.readyState >= video.HAVE_CURRENT_DATA) {
+            videoTexture.needsUpdate = true;
+        }
+        requestAnimationFrame(updateTexture);
+    }
+
+    // Start the texture update loop
+    updateTexture();
+
     console.log("Video plane added to AR scene.");
 }
 </script>
