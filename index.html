@@ -61,7 +61,7 @@
                   let lottieTexture = null;
 
                   customElements.whenDefined('model-viewer').then(() => {
-                    videoTexture = modelViewerAnimated.createVideoTexture("../logo.mp4");
+                    videoTexture = modelViewerAnimated.createVideoTexture("logo.mp4");
                   });
 
                   function getCanvasTexture() {
@@ -80,7 +80,7 @@
 
                   function getLottieTexture() {
                     if (lottieTexture) return lottieTexture;
-                    lottieTexture = modelViewerAnimated.createLottieTexture("../Lottie Lego.json", 2);
+                    lottieTexture = modelViewerAnimated.createLottieTexture("Lottie Lego.json", 2);
                     return lottieTexture;
                   }
 
