@@ -44,7 +44,7 @@
 <body>
 
     <model-viewer id="model" 
-        src="https://your-secure-server.com/pl.glb"  <!-- ✅ Use absolute URL -->
+        src="/pl.glb"  <!-- ✅ Use absolute URL -->
         alt="3D model with video texture" 
         auto-rotate 
         camera-controls 
@@ -55,7 +55,7 @@
     </model-viewer>
 
     <video id="animatedTexture" loop playsinline crossorigin="anonymous">
-        <source src="https://your-secure-server.com/your-video.mp4" type="video/mp4">  <!-- ✅ Use direct .mp4 link -->
+        <source src="/your-video.mp4" type="video/mp4">  <!-- ✅ Use direct .mp4 link -->
     </video>
 
     <button id="start-video">Start Video</button>
