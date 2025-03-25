@@ -30,85 +30,69 @@
 </head>
 <body>
 
-    <model-viewer id="animated" camera-controls touch-action="pan-y"
-        src="pl.glb" ar alt="A 3D model of a sphere">
-        
-        <div class="controls">
-            <p>Texture Type</p>
-            <select id="type">
-                <option value="lottie">Lottie</option>
-                <option value="video">Video</option>
-                <option value="canvas">Canvas</option>
-            </select>
-        </div>
-    </model-viewer>
+   <model-viewer id="animated" camera-controls touch-action="pan-y" src="pi.glb" ar alt="A 3D model of a duck">
+                  <div class="controls glass">
+                    <p>Texture Type</p>
+                    <select id="type">
+                      <option value="lottie">Lottie</option>
+                      <option value="video">Video</option>
+                      <option value="canvas">Canvas</option>
+                    </select>
+                  </div>
+                </model-viewer>
+                <script type="module">
+                  const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
-    <video id="videoElement" src="Video.mp4" loop muted crossorigin="anonymous" style="display:none;"></video>
+                  let videoTexture = null;
+                  let canvasTexture = null;
+                  let lottieTexture = null;
 
-    <script type="module">
-        const modelViewerAnimated = document.querySelector("model-viewer#animated");
+                  customElements.whenDefined('model-viewer').then(() => {
+                    videoTexture = modelViewerAnimated.createVideoTexture("../../shared-assets/models/lottie-logo.mp4");
+                  });
 
-        let videoTexture = null;
-        let canvasTexture = null;
-        let lottieTexture = null;
+                  function getCanvasTexture() {
+                    if (canvasTexture) return canvasTexture;
+                    canvasTexture = modelViewerAnimated.createCanvasTexture();
+                    const canvas = canvasTexture.source.element;
+                    canvas.width = 1600;
+                    canvas.height = 800;
+                    const ctx = canvas.getContext('2d');
+                    ctx.font = "250px sans-serif";
+                    ctx.fillStyle = "#aaa";
+                    ctx.fillText('Canvas 2D!', 0, 400);
+                    canvasTexture.source.update();
+                    return canvasTexture;
+                  }
 
-        const basePath = window.location.origin + window.location.pathname.replace(/\/$/, ""); // Ensure correct paths
-        const videoPath = `${basePath}/Video.mp4`;
-        const lottiePath = `${basePath}/Lottie-Lego.json`;
+                  function getLottieTexture() {
+                    if (lottieTexture) return lottieTexture;
+                    lottieTexture = modelViewerAnimated.createLottieTexture("../../shared-assets/models/24017-lottie-logo-animation.json", 2);
+                    return lottieTexture;
+                  }
 
-        console.log("Video Path:", videoPath);
-        console.log("Lottie Path:", lottiePath);
+                  modelViewerAnimated.addEventListener("load", async () => {
 
-        customElements.whenDefined('model-viewer').then(() => {
-            const videoElement = document.getElementById("videoElement");
-            videoTexture = modelViewerAnimated.createVideoTexture(videoElement);
-        });
+                    const material = modelViewerAnimated.model.materials[0];
+                    const { baseColorTexture } = material.pbrMetallicRoughness;
 
-        function getCanvasTexture() {
-            if (canvasTexture) return canvasTexture;
-            canvasTexture = modelViewerAnimated.createCanvasTexture();
-            const canvas = canvasTexture.source.element;
-            canvas.width = 1600;
-            canvas.height = 800;
-            const ctx = canvas.getContext('2d');
-            ctx.font = "250px sans-serif";
-            ctx.fillStyle = "#aaa";
-            ctx.fillText('Canvas 2D!', 0, 400);
-            canvasTexture.source.update();
-            return canvasTexture;
-        }
+                    baseColorTexture.setTexture(await getLottieTexture());
 
-        async function getLottieTexture() {
-            if (lottieTexture) return lottieTexture;
-            try {
-                lottieTexture = modelViewerAnimated.createLottieTexture(lottiePath, 2);
-                return lottieTexture;
-            } catch (error) {
-                console.error("Error loading Lottie texture:", error);
-            }
-        }
+                    document.querySelector('#type').addEventListener('input', async (event) => {
+                      switch (event.target.value) {
+                        case "video":
+                          baseColorTexture.setTexture(videoTexture);
+                          break;
+                        case "canvas":
+                          baseColorTexture.setTexture(getCanvasTexture());
+                          break;
+                        case "lottie":
+                          baseColorTexture.setTexture(await getLottieTexture());
+                          break;
+                      }
+                    });
+                  });
 
-        modelViewerAnimated.addEventListener("load", async () => {
-            const material = modelViewerAnimated.model.materials[0];
-            const { baseColorTexture } = material.pbrMetallicRoughness;
-
-            baseColorTexture.setTexture(await getLottieTexture());
-
-            document.querySelector('#type').addEventListener('input', async (event) => {
-                switch (event.target.value) {
-                    case "video":
-                        baseColorTexture.setTexture(videoTexture);
-                        break;
-                    case "canvas":
-                        baseColorTexture.setTexture(getCanvasTexture());
-                        break;
-                    case "lottie":
-                        baseColorTexture.setTexture(await getLottieTexture());
-                        break;
-                }
-            });
-        });
-    </script>
-
+                </script>
 </body>
 </html>
