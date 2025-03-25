@@ -68,7 +68,7 @@
         async function createVideoTexture() {
             if (!videoTexture) {
                 try {
-                    await videoElement.play(); // Ensure video is playing
+                    await videoElement.play(); // Ensure the video is playing
                     videoTexture = await modelViewer.createVideoTexture(videoElement);
                     return videoTexture;
                 } catch (error) {
@@ -82,23 +82,25 @@
         async function applyVideoTexture() {
             try {
                 const material = modelViewer.model.materials[0]; // Get the first material
-                const { baseColorTexture } = material.pbrMetallicRoughness;
 
-                if (!baseColorTexture) {
-                    console.error("❌ No baseColorTexture found!");
+                // Check if material exists
+                if (!material) {
+                    console.error("❌ No material found!");
                     return;
                 }
 
                 const texture = await createVideoTexture();
                 if (texture) {
-                    baseColorTexture.setTexture(texture);
+                    material.pbrMetallicRoughness.setBaseColorTexture(texture);
 
-                    // Set emissive properties to ensure the video texture is visible
-                    material.pbrMetallicRoughness.metallicFactor = 0.0;
-                    material.pbrMetallicRoughness.roughnessFactor = 1.0;
+                    // Fix darkness by adjusting metallic and roughness properties
+                    material.pbrMetallicRoughness.setMetallicFactor(0.0);
+                    material.pbrMetallicRoughness.setRoughnessFactor(1.0);
+
+                    // Increase brightness using emissive properties
                     material.setEmissiveFactor([1, 1, 1]); // Full white emissive
-                    material.setEmissiveStrength(1.5); // Increase brightness
-                    
+                    material.setEmissiveStrength(2.0); // Increase brightness
+
                     modelViewer.model.updateMaterials(); // Apply material changes
                     startButton.style.display = "none";
                 }
@@ -108,6 +110,7 @@
         }
 
         modelViewer.addEventListener("load", async () => {
+            console.log("✅ Model loaded successfully!");
             try {
                 await applyVideoTexture();
             } catch (e) {
