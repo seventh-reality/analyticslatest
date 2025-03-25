@@ -43,6 +43,8 @@
         </div>
     </model-viewer>
 
+    <video id="videoElement" src="Video.mp4" loop muted crossorigin="anonymous" style="display:none;"></video>
+
     <script type="module">
         const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
@@ -50,13 +52,16 @@
         let canvasTexture = null;
         let lottieTexture = null;
 
-        const basePath = window.location.origin + window.location.pathname.replace(/\/$/, ""); // Ensures correct asset paths
-        const glbPath = `${basePath}./pl.glb`;
-        const videoPath = `${basePath}./Video.mp4`;
-        const lottiePath = `${basePath}./Lottie Lego.json`;
+        const basePath = window.location.origin + window.location.pathname.replace(/\/$/, ""); // Ensure correct paths
+        const videoPath = `${basePath}/Video.mp4`;
+        const lottiePath = `${basePath}/Lottie-Lego.json`;
+
+        console.log("Video Path:", videoPath);
+        console.log("Lottie Path:", lottiePath);
 
         customElements.whenDefined('model-viewer').then(() => {
-            videoTexture = modelViewerAnimated.createVideoTexture(videoPath);
+            const videoElement = document.getElementById("videoElement");
+            videoTexture = modelViewerAnimated.createVideoTexture(videoElement);
         });
 
         function getCanvasTexture() {
@@ -73,10 +78,14 @@
             return canvasTexture;
         }
 
-        function getLottieTexture() {
+        async function getLottieTexture() {
             if (lottieTexture) return lottieTexture;
-            lottieTexture = modelViewerAnimated.createLottieTexture(lottiePath, 2);
-            return lottieTexture;
+            try {
+                lottieTexture = modelViewerAnimated.createLottieTexture(lottiePath, 2);
+                return lottieTexture;
+            } catch (error) {
+                console.error("Error loading Lottie texture:", error);
+            }
         }
 
         modelViewerAnimated.addEventListener("load", async () => {
