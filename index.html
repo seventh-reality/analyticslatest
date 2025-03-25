@@ -44,10 +44,12 @@
       touch-action="pan-y" 
       src="https://modelviewer.dev/shared-assets/models/sphere.glb" 
       ar 
-      alt="A 3D model with a video texture">
+      alt="A 3D model with a video texture"
+      auto-rotate
+      exposure="1.5">
     </model-viewer>
 
-    <video id="videoTexture" loop playsinline muted crossorigin="anonymous">
+    <video id="videoTexture" loop playsinline crossorigin="anonymous">
         <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
     </video>
 
@@ -58,21 +60,28 @@
         const videoElement = document.getElementById("videoTexture");
         const startButton = document.getElementById("start-button");
 
+        // Configure video element
         videoElement.muted = true;
         videoElement.preload = "auto";
         videoElement.playsInline = true;
-        videoElement.load();
-
+        
         let videoTexture = null;
+        let isVideoPlaying = false;
 
         async function createVideoTexture() {
             if (!videoTexture) {
                 try {
-                    await videoElement.play(); // Ensure the video is playing
-                    videoTexture = await modelViewer.createVideoTexture(videoElement);
+                    // Try to play the video (must be triggered by user interaction)
+                    await videoElement.play().catch(e => {
+                        console.log("Video play requires user interaction:", e);
+                        return null;
+                    });
+                    
+                    videoTexture = await modelViewer.createTexture(videoElement);
+                    isVideoPlaying = true;
                     return videoTexture;
                 } catch (error) {
-                    console.error("❌ Video texture creation failed:", error);
+                    console.error("Video texture creation failed:", error);
                     return null;
                 }
             }
@@ -81,50 +90,77 @@
 
         async function applyVideoTexture() {
             try {
-                const material = modelViewer.model.materials[0]; // Get the first material
-
-                // Check if material exists
-                if (!material) {
-                    console.error("❌ No material found!");
+                if (!modelViewer.model) {
+                    console.log("Model not loaded yet");
                     return;
                 }
 
                 const texture = await createVideoTexture();
-                if (texture) {
-                    material.pbrMetallicRoughness.setBaseColorTexture(texture);
-
-                    // Fix darkness by adjusting metallic and roughness properties
-                    material.pbrMetallicRoughness.setMetallicFactor(0.0);
-                    material.pbrMetallicRoughness.setRoughnessFactor(1.0);
-
-                    // Increase brightness using emissive properties
-                    material.setEmissiveFactor([1, 1, 1]); // Full white emissive
-                    material.setEmissiveStrength(2.0); // Increase brightness
-
-                    modelViewer.model.updateMaterials(); // Apply material changes
-                    startButton.style.display = "none";
+                if (!texture) {
+                    console.log("Couldn't create video texture");
+                    return;
                 }
+
+                const material = modelViewer.model.materials[0];
+                if (!material) {
+                    console.error("No material found!");
+                    return;
+                }
+
+                // Apply the video texture
+                material.pbrMetallicRoughness.setBaseColorTexture(texture);
+                
+                // Adjust material properties for better visibility
+                material.pbrMetallicRoughness.setMetallicFactor(0.0);
+                material.pbrMetallicRoughness.setRoughnessFactor(0.5);
+                material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+                
+                // Add some emissive properties to make it brighter
+                material.setEmissiveFactor([0.5, 0.5, 0.5]);
+                material.setEmissiveTexture(texture);
+                material.setEmissiveStrength(1.5);
+
+                modelViewer.dismissPoster();
+                modelViewer.model.updateMaterials();
+                startButton.style.display = "none";
+                
+                console.log("Video texture applied successfully");
             } catch (error) {
-                console.error("❌ Error applying video texture:", error);
+                console.error("Error applying video texture:", error);
             }
         }
 
-        modelViewer.addEventListener("load", async () => {
-            console.log("✅ Model loaded successfully!");
+        // When model loads
+        modelViewer.addEventListener("load", () => {
+            console.log("Model loaded");
+            // Preload but don't apply yet (needs user interaction)
+        });
+
+        // On button click (user interaction)
+        startButton.addEventListener("click", async () => {
             try {
                 await applyVideoTexture();
+                // Ensure video continues playing
+                if (!isVideoPlaying) {
+                    await videoElement.play();
+                    isVideoPlaying = true;
+                }
             } catch (e) {
-                console.warn("❌ Initial texture application failed:", e);
+                console.error("Failed to start video:", e);
             }
         });
 
-        startButton.addEventListener("click", async () => {
-            await applyVideoTexture();
-        });
-
+        // For AR mode
         modelViewer.addEventListener("ar-status", async (event) => {
             if (event.detail.status === "session-started") {
                 await applyVideoTexture();
+            }
+        });
+
+        // Handle cases where video might pause
+        videoElement.addEventListener('pause', () => {
+            if (isVideoPlaying) {
+                videoElement.play().catch(e => console.log("Video play interrupted:", e));
             }
         });
 
