@@ -44,18 +44,18 @@
 <body>
 
     <model-viewer id="model" 
-        src="/pl.glb"  <!-- ✅ Host on HTTPS -->
+        src="https://your-secure-server.com/pl.glb"  <!-- ✅ Use absolute URL -->
         alt="3D model with video texture" 
         auto-rotate 
         camera-controls 
         ar 
-        ar-modes="webxr scene-viewer quick-look"  <!-- ✅ Ensure AR works -->
+        ar-modes="webxr scene-viewer quick-look"
         shadow-intensity="1.0"
         exposure="1.0">
     </model-viewer>
 
     <video id="animatedTexture" loop playsinline crossorigin="anonymous">
-        <source src="https://www.youtube.com/watch?v=egQFAeu6Ihw&t=1386s" type="video/mp4">  <!-- ✅ Ensure video is on HTTPS -->
+        <source src="https://your-secure-server.com/your-video.mp4" type="video/mp4">  <!-- ✅ Use direct .mp4 link -->
     </video>
 
     <button id="start-video">Start Video</button>
@@ -67,15 +67,15 @@
         const startButton = document.getElementById('start-video');
         const arButton = document.getElementById('ar-button');
 
-        // Ensure video is preloaded
+        // ✅ Ensure video is preloaded
         videoElement.preload = "auto";
-        videoElement.muted = true;  // ✅ Set to true to allow autoplay on most browsers
+        videoElement.muted = true;  
 
         modelViewer.addEventListener("load", async () => {
             try {
                 await modelViewer.updateComplete;  // ✅ Ensure model is fully loaded
 
-                // ✅ Ensure model has a material
+                // ✅ Check if model has a material
                 const material = modelViewer.model.materials[0];
                 if (!material) {
                     console.error("No material found in model.");
@@ -86,10 +86,10 @@
                 const videoTexture = await modelViewer.createVideoTexture(videoElement);
                 material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
 
-                // ✅ Ensure video plays on user interaction
+                // ✅ Start video playback on user interaction
                 startButton.addEventListener("click", () => {
                     videoElement.play().then(() => {
-                        startButton.style.display = "none"; // Hide button after play starts
+                        startButton.style.display = "none"; 
                     }).catch(error => {
                         console.error("Video play failed:", error);
                     });
@@ -102,7 +102,7 @@
                     }
                 });
 
-                // ✅ Trigger AR mode on button click
+                // ✅ Activate AR mode on button click
                 arButton.addEventListener("click", () => {
                     modelViewer.activateAR();
                 });
