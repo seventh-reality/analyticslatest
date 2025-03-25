@@ -18,9 +18,8 @@
         }
 
         model-viewer {
-            width: 80%;
-            height: 80%;
-            --poster-color: transparent;
+            width: 100%;
+            height: 100%;
         }
 
         video {
@@ -37,8 +36,8 @@
     camera-controls 
     background-color="#F5F5F5"
     shadow-intensity="1.0" 
-    style="width: 100%; height: 100%;" 
-    animation-name="rotate" 
+    style="width: 100%; height: 100%;"
+    animation-name="rotate"
     exposure="1.0">
 </model-viewer>
 
@@ -52,16 +51,21 @@
     const videoElement = document.getElementById('animatedTexture');
 
     modelViewer.addEventListener('load', () => {
-        const material = modelViewer.querySelector('model-viewer').material;
+        // Wait for the model to load
+        modelViewer.addEventListener('load', () => {
+            // Get the material and apply the video texture (this won't work directly via model-viewer)
+            // model-viewer does not expose a direct method to update textures
+            const material = modelViewer.shadowRoot.querySelector('model-viewer').material;
 
-        // Wait for the model to load and apply the video texture
-        const texture = new THREE.VideoTexture(videoElement);
+            // Set the texture of the material to the video texture
+            const texture = new THREE.VideoTexture(videoElement);
 
-        // Apply the video texture to the model’s material
-        material.map = texture;
-        material.needsUpdate = true;
+            // Update the model material's map with the video texture
+            material.map = texture;
+            material.needsUpdate = true;
+        });
 
-        // Start the video
+        // Play the video after loading the model
         videoElement.play();
     });
 </script>
