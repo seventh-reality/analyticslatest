@@ -3,122 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Model with Texture Switching</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
-    <script type="importmap">
-{
-  "imports": {
-    "three": "path/to/your/model-viewer.min.js"
-  }
-}
-</script>
-    <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-
-<script type="importmap-shim">
-{
-  "imports": {
-    "three": "path/to/your/model-viewer.min.js"
-  }
-}
-</script>
-
-<script type="module-shim" src="path/to/your/model-viewer.min.js"></script>
-
+    <title>Model-Viewer Animated Texture</title>
+    <script type="module">
+        import '@google/model-viewer';
+    </script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
             margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
             height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+
         model-viewer {
-            width: 100%;
-            max-width: 600px;
-            height: 400px;
+            width: 80%;
+            height: 80%;
+            --poster-color: transparent;
         }
-        .controls {
-            margin-top: 20px;
+
+        video {
+            display: none; /* Hide the video element */
         }
     </style>
 </head>
 <body>
 
-   <model-viewer id="animated" camera-controls touch-action="pan-y" src="pl.glb" ar alt="A 3D model of a duck">
-        <div class="controls glass">
-            <p>Texture Type</p>
-            <select id="type">
-                <option value="lottie">Lottie</option>
-                <option value="video">Video</option>
-                <option value="canvas">Canvas</option>
-            </select>
-        </div>
-    </model-viewer>
+<model-viewer id="model" 
+    src="path_to_your_model.glb" 
+    alt="3D model with animated texture" 
+    auto-rotate 
+    camera-controls 
+    background-color="#F5F5F5"
+    shadow-intensity="1.0" 
+    style="width: 100%; height: 100%;" 
+    animation-name="rotate" 
+    exposure="1.0">
+</model-viewer>
 
-    <script type="module">
-        const modelViewerAnimated = document.querySelector("model-viewer#animated");
+<video id="animatedTexture" autoplay loop muted>
+    <source src="Video.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
 
-        let videoTexture = null;
-        let canvasTexture = null;
-        let lottieTexture = null;
+<script>
+    const modelViewer = document.querySelector('model-viewer');
+    const videoElement = document.getElementById('animatedTexture');
 
-        customElements.whenDefined('model-viewer').then(() => {
-            // Load the video texture
-            const videoElement = document.createElement('video');
-            videoElement.src = "https://www.youtube.com/watch?v=egQFAeu6Ihw&t=1386s"; // Make sure this path is correct
-            videoElement.loop = true;
-            videoElement.muted = true; // Mute the video (otherwise it may not autoplay)
-            videoElement.play(); // Start the video playing automatically
-            videoTexture = modelViewerAnimated.createVideoTexture(videoElement);
-        });
+    modelViewer.addEventListener('load', () => {
+        const material = modelViewer.querySelector('model-viewer').material;
 
-        function getCanvasTexture() {
-            if (canvasTexture) return canvasTexture;
-            canvasTexture = modelViewerAnimated.createCanvasTexture();
-            const canvas = canvasTexture.source.element;
-            canvas.width = 1600;
-            canvas.height = 800;
-            const ctx = canvas.getContext('2d');
-            ctx.font = "250px sans-serif";
-            ctx.fillStyle = "#aaa";
-            ctx.fillText('Canvas 2D!', 0, 400);
-            canvasTexture.source.update();
-            return canvasTexture;
-        }
+        // Wait for the model to load and apply the video texture
+        const texture = new THREE.VideoTexture(videoElement);
 
-        function getLottieTexture() {
-            if (lottieTexture) return lottieTexture;
-            // Assuming Lottie Lego.json is correct and the path is correct
-            lottieTexture = modelViewerAnimated.createLottieTexture("/Lottie Lego.json", 2); 
-            return lottieTexture;
-        }
+        // Apply the video texture to the model’s material
+        material.map = texture;
+        material.needsUpdate = true;
 
-        modelViewerAnimated.addEventListener("load", async () => {
-            const material = modelViewerAnimated.model.materials[0];
-            const { baseColorTexture } = material.pbrMetallicRoughness;
+        // Start the video
+        videoElement.play();
+    });
+</script>
 
-            // Set initial texture to Lottie
-            baseColorTexture.setTexture(await getLottieTexture());
-
-            // Change texture based on dropdown selection
-            document.querySelector('#type').addEventListener('input', async (event) => {
-                switch (event.target.value) {
-                    case "video":
-                        baseColorTexture.setTexture(videoTexture);
-                        break;
-                    case "canvas":
-                        baseColorTexture.setTexture(getCanvasTexture());
-                        break;
-                    case "lottie":
-                        baseColorTexture.setTexture(await getLottieTexture());
-                        break;
-                }
-            });
-        });
-    </script>
 </body>
 </html>
