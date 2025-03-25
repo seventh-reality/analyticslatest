@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Model-Viewer with Video Texture</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -27,97 +26,56 @@
 </head>
 <body>
 
-<model-viewer id="model" 
-    src="pl.glb" 
-    alt="3D model with video texture" 
-    auto-rotate 
-    camera-controls 
-    shadow-intensity="1.0"
-    exposure="1.0">
-</model-viewer>
+    <model-viewer id="model" 
+        src="pl.glb" 
+        alt="3D model with video texture" 
+        auto-rotate 
+        camera-controls 
+        shadow-intensity="1.0"
+        exposure="1.0">
+    </model-viewer>
 
-<video id="animatedTexture" loop muted playsinline crossorigin="anonymous">
-    <source src="Video.mp4" type="video/mp4">
-</video>
+    <video id="animatedTexture" loop muted playsinline crossorigin="anonymous">
+        <source src="Video.mp4" type="video/mp4">
+    </video>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
+    <script type="module">
         const modelViewer = document.querySelector('#model');
         const videoElement = document.getElementById('animatedTexture');
-        
-        // Initialize video
-        videoElement.muted = true;
+
+        // Ensure video is preloaded
         videoElement.preload = "auto";
-        videoElement.playsInline = true;
-        
-        // Wait for model to load
-        modelViewer.addEventListener('load', async () => {
+
+        modelViewer.addEventListener("load", async () => {
             try {
-                // Wait for model-viewer to be ready
+                // Ensure model is ready
                 await modelViewer.updateComplete;
-                
-                // Get the Three.js scene
-                const scene = modelViewer.scene;
-                if (!scene) {
-                    console.error("Could not access Three.js scene");
+
+                // Check if the model has materials
+                const material = modelViewer.model.materials[0];
+                if (!material) {
+                    console.error("No material found in model.");
                     return;
                 }
-                
-                // Create video texture
-                const videoTexture = new THREE.VideoTexture(videoElement);
-                videoTexture.encoding = THREE.sRGBEncoding;
-                videoTexture.minFilter = THREE.LinearFilter;
-                videoTexture.magFilter = THREE.LinearFilter;
-                
-                // Find the first material in the model
-                let targetMaterial = null;
-                scene.traverse((child) => {
-                    if (child.isMesh && !targetMaterial) {
-                        targetMaterial = child.material;
-                    }
-                });
-                
-                if (targetMaterial) {
-                    // Apply video texture to material
-                    if (targetMaterial.isMeshStandardMaterial) {
-                        targetMaterial.map = videoTexture;
-                        targetMaterial.needsUpdate = true;
-                    } else if (targetMaterial.materials) {
-                        // Handle multi-material objects
-                        for (const material of targetMaterial.materials) {
-                            if (material.isMeshStandardMaterial) {
-                                material.map = videoTexture;
-                                material.needsUpdate = true;
-                            }
-                        }
-                    }
-                    
-                    // Start video playback (trigger on user click if necessary)
-                    modelViewer.addEventListener('click', () => {
-                        videoElement.play().catch(e => {
-                            console.error("Video play failed:", e);
-                        });
-                    });
 
-                    // Animation loop to update texture
-                    function animate() {
-                        requestAnimationFrame(animate);
-                        if (videoElement.readyState >= videoElement.HAVE_ENOUGH_DATA) {
-                            videoTexture.needsUpdate = true;
-                        }
-                    }
-                    animate();
-                    
-                } else {
-                    console.error("No suitable material found in model");
-                }
-                
+                // Create a video texture
+                const videoTexture = modelViewer.createVideoTexture(videoElement);
+
+                // Set the texture
+                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+
+                // Start the video on user interaction
+                modelViewer.addEventListener("click", () => {
+                    videoElement.play().catch(error => {
+                        console.error("Video play failed:", error);
+                    });
+                });
+
             } catch (error) {
                 console.error("Error applying video texture:", error);
             }
         });
-    });
-</script>
+    </script>
 
 </body>
 </html>
