@@ -44,22 +44,24 @@
 <body>
 
     <model-viewer id="model" 
-        src="/pl.glb"  <!-- ✅ Use absolute URL -->
+        src="pl.glb"  <!-- ✅ Must be HTTPS -->
         alt="3D model with video texture" 
         auto-rotate 
         camera-controls 
         ar 
-        ar-modes="webxr scene-viewer quick-look"
+        ar-modes="webxr scene-viewer quick-look"  <!-- ✅ Ensures cross-device compatibility -->
+        ar-scale="fixed"  <!-- ✅ Helps with proper scaling -->
+        quick-look-browsers="safari chrome"
         shadow-intensity="1.0"
         exposure="1.0">
     </model-viewer>
 
     <video id="animatedTexture" loop playsinline crossorigin="anonymous">
-        <source src="/your-video.mp4" type="video/mp4">  <!-- ✅ Use direct .mp4 link -->
+        <source src="Video.mp4" type="video/mp4">  <!-- ✅ Must be direct MP4 URL -->
     </video>
 
     <button id="start-video">Start Video</button>
-    <button id="ar-button" hidden>Enter AR</button>
+    <button id="ar-button">Enter AR</button>  <!-- ✅ Always visible -->
 
     <script type="module">
         const modelViewer = document.querySelector('#model');
@@ -69,53 +71,33 @@
 
         // ✅ Ensure video is preloaded
         videoElement.preload = "auto";
-        videoElement.muted = true;
+        videoElement.muted = true;  
 
         modelViewer.addEventListener("load", async () => {
             try {
                 await modelViewer.updateComplete;  // ✅ Ensure model is fully loaded
 
-                // ✅ Access Three.js scene
-                const scene = modelViewer.scene;
-                if (!scene) {
-                    console.error("No scene available");
+                // ✅ Check if model has a material
+                const material = modelViewer.model.materials[0];
+                if (!material) {
+                    console.error("No material found in model.");
                     return;
                 }
 
                 // ✅ Create and apply the video texture
-                const videoTexture = new THREE.VideoTexture(videoElement);
-                videoTexture.encoding = THREE.sRGBEncoding;
-                videoTexture.minFilter = THREE.LinearFilter;
-                videoTexture.magFilter = THREE.LinearFilter;
-
-                // ✅ Traverse the model and apply the texture to the first found material
-                scene.traverse((child) => {
-                    if (child.isMesh) {
-                        const material = child.material;
-                        if (material.isMeshStandardMaterial) {
-                            material.map = videoTexture;
-                            material.needsUpdate = true;
-                        }
-                    }
-                });
+                const videoTexture = await modelViewer.createVideoTexture(videoElement);
+                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
 
                 // ✅ Start video playback on user interaction
                 startButton.addEventListener("click", () => {
                     videoElement.play().then(() => {
-                        startButton.style.display = "none"; // Hide the start button after play
+                        startButton.style.display = "none"; 
                     }).catch(error => {
                         console.error("Video play failed:", error);
                     });
                 });
 
-                // ✅ Show AR button when AR is available
-                modelViewer.addEventListener('ar-status', (event) => {
-                    if (event.detail.status === 'session-started') {
-                        arButton.hidden = false;  // Show AR button when AR session starts
-                    }
-                });
-
-                // ✅ Activate AR mode on button click
+                // ✅ AR Button activates AR mode
                 arButton.addEventListener("click", () => {
                     modelViewer.activateAR();
                 });
