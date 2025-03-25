@@ -43,72 +43,69 @@
 </head>
 <body>
 
-    <model-viewer 
-    id="model" 
-    src="pl.glb" 
-    alt="3D model with video texture"
-    auto-rotate 
-    camera-controls 
-    ar 
-    ar-modes="webxr scene-viewer quick-look" 
-    ar-scale="fixed"  
-    quick-look-browsers="safari"  
-    shadow-intensity="1"
-    exposure="1"
-</model-viewer>
+    <model-viewer id="animated" camera-controls touch-action="pan-y" src="../../shared-assets/models/sphere.glb" ar alt="A 3D model of a duck">
+                  <div class="controls glass">
+                    <p>Texture Type</p>
+                    <select id="type">
+                      <option value="lottie">Lottie</option>
+                      <option value="video">Video</option>
+                      <option value="canvas">Canvas</option>
+                    </select>
+                  </div>
+                </model-viewer>
+                <script type="module">
+                  const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
-    <video id="animatedTexture" loop playsinline crossorigin="anonymous">
-        <source src="logo.mp4" type="video/mp4">  <!-- ✅ Must be direct MP4 URL -->
-    </video>
+                  let videoTexture = null;
+                  let canvasTexture = null;
+                  let lottieTexture = null;
 
-    <button id="start-video">Start Video</button>
-    <button id="ar-button">Enter AR</button>  <!-- ✅ Always visible -->
+                  customElements.whenDefined('model-viewer').then(() => {
+                    videoTexture = modelViewerAnimated.createVideoTexture("../../shared-assets/models/lottie-logo.mp4");
+                  });
 
-    <script type="module">
-        const modelViewer = document.querySelector('#model');
-        const videoElement = document.getElementById('animatedTexture');
-        const startButton = document.getElementById('start-video');
-        const arButton = document.getElementById('ar-button');
+                  function getCanvasTexture() {
+                    if (canvasTexture) return canvasTexture;
+                    canvasTexture = modelViewerAnimated.createCanvasTexture();
+                    const canvas = canvasTexture.source.element;
+                    canvas.width = 1600;
+                    canvas.height = 800;
+                    const ctx = canvas.getContext('2d');
+                    ctx.font = "250px sans-serif";
+                    ctx.fillStyle = "#aaa";
+                    ctx.fillText('Canvas 2D!', 0, 400);
+                    canvasTexture.source.update();
+                    return canvasTexture;
+                  }
 
-        // ✅ Ensure video is preloaded
-        videoElement.preload = "auto";
-        videoElement.muted = true;  
+                  function getLottieTexture() {
+                    if (lottieTexture) return lottieTexture;
+                    lottieTexture = modelViewerAnimated.createLottieTexture("../../shared-assets/models/24017-lottie-logo-animation.json", 2);
+                    return lottieTexture;
+                  }
 
-        modelViewer.addEventListener("load", async () => {
-            try {
-                await modelViewer.updateComplete;  // ✅ Ensure model is fully loaded
+                  modelViewerAnimated.addEventListener("load", async () => {
 
-                // ✅ Check if model has a material
-                const material = modelViewer.model.materials[0];
-                if (!material) {
-                    console.error("No material found in model.");
-                    return;
-                }
+                    const material = modelViewerAnimated.model.materials[0];
+                    const { baseColorTexture } = material.pbrMetallicRoughness;
 
-                // ✅ Create and apply the video texture
-                const videoTexture = await modelViewer.createVideoTexture(videoElement);
-                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+                    baseColorTexture.setTexture(await getLottieTexture());
 
-                // ✅ Start video playback on user interaction
-                startButton.addEventListener("click", () => {
-                    videoElement.play().then(() => {
-                        startButton.style.display = "none"; 
-                    }).catch(error => {
-                        console.error("Video play failed:", error);
+                    document.querySelector('#type').addEventListener('input', async (event) => {
+                      switch (event.target.value) {
+                        case "video":
+                          baseColorTexture.setTexture(videoTexture);
+                          break;
+                        case "canvas":
+                          baseColorTexture.setTexture(getCanvasTexture());
+                          break;
+                        case "lottie":
+                          baseColorTexture.setTexture(await getLottieTexture());
+                          break;
+                      }
                     });
-                });
+                  });
 
-                // ✅ AR Button activates AR mode
-                arButton.addEventListener("click", () => {
-                    modelViewer.activateAR();
-                });
-
-            } catch (error) {
-                console.error("Error applying video texture:", error);
-            }
-        });
-
-    </script>
-
+                </script>
 </body>
 </html>
