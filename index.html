@@ -39,131 +39,69 @@
 </head>
 <body>
 
-    <model-viewer id="animated" 
-      camera-controls 
-      touch-action="pan-y" 
-      src="https://modelviewer.dev/shared-assets/models/sphere.glb" 
-      ar 
-      alt="A 3D model with a video texture"
-      auto-rotate
-      exposure="1.5">
-    </model-viewer>
+   <model-viewer id="animated" camera-controls touch-action="pan-y" src="https://modelviewer.dev/shared-assets/models/sphere.glb" ar alt="A 3D model of a duck">
+                  <div class="controls glass">
+                    <p>Texture Type</p>
+                    <select id="type">
+                      <option value="lottie">Lottie</option>
+                      <option value="video">Video</option>
+                      <option value="canvas">Canvas</option>
+                    </select>
+                  </div>
+                </model-viewer>
+                <script type="module">
+                  const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
-    <video id="videoTexture" loop playsinline crossorigin="anonymous">
-        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
-    </video>
+                  let videoTexture = null;
+                  let canvasTexture = null;
+                  let lottieTexture = null;
 
-    <button id="start-button">Start Video</button>
+                  customElements.whenDefined('model-viewer').then(() => {
+                    videoTexture = modelViewerAnimated.createVideoTexture("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
+                  });
 
-    <script type="module">
-        const modelViewer = document.querySelector("#animated");
-        const videoElement = document.getElementById("videoTexture");
-        const startButton = document.getElementById("start-button");
+                  function getCanvasTexture() {
+                    if (canvasTexture) return canvasTexture;
+                    canvasTexture = modelViewerAnimated.createCanvasTexture();
+                    const canvas = canvasTexture.source.element;
+                    canvas.width = 1600;
+                    canvas.height = 800;
+                    const ctx = canvas.getContext('2d');
+                    ctx.font = "250px sans-serif";
+                    ctx.fillStyle = "#aaa";
+                    ctx.fillText('Canvas 2D!', 0, 400);
+                    canvasTexture.source.update();
+                    return canvasTexture;
+                  }
 
-        // Configure video element
-        videoElement.muted = true;
-        videoElement.preload = "auto";
-        videoElement.playsInline = true;
-        
-        let videoTexture = null;
-        let isVideoPlaying = false;
+                  function getLottieTexture() {
+                    if (lottieTexture) return lottieTexture;
+                    lottieTexture = modelViewerAnimated.createLottieTexture("../../shared-assets/models/24017-lottie-logo-animation.json", 2);
+                    return lottieTexture;
+                  }
 
-        async function createVideoTexture() {
-            if (!videoTexture) {
-                try {
-                    // Try to play the video (must be triggered by user interaction)
-                    await videoElement.play().catch(e => {
-                        console.log("Video play requires user interaction:", e);
-                        return null;
+                  modelViewerAnimated.addEventListener("load", async () => {
+
+                    const material = modelViewerAnimated.model.materials[0];
+                    const { baseColorTexture } = material.pbrMetallicRoughness;
+
+                    baseColorTexture.setTexture(await getLottieTexture());
+
+                    document.querySelector('#type').addEventListener('input', async (event) => {
+                      switch (event.target.value) {
+                        case "video":
+                          baseColorTexture.setTexture(videoTexture);
+                          break;
+                        case "canvas":
+                          baseColorTexture.setTexture(getCanvasTexture());
+                          break;
+                        case "lottie":
+                          baseColorTexture.setTexture(await getLottieTexture());
+                          break;
+                      }
                     });
-                    
-                    videoTexture = await modelViewer.createTexture(videoElement);
-                    isVideoPlaying = true;
-                    return videoTexture;
-                } catch (error) {
-                    console.error("Video texture creation failed:", error);
-                    return null;
-                }
-            }
-            return videoTexture;
-        }
+                  });
 
-        async function applyVideoTexture() {
-            try {
-                if (!modelViewer.model) {
-                    console.log("Model not loaded yet");
-                    return;
-                }
-
-                const texture = await createVideoTexture();
-                if (!texture) {
-                    console.log("Couldn't create video texture");
-                    return;
-                }
-
-                const material = modelViewer.model.materials[0];
-                if (!material) {
-                    console.error("No material found!");
-                    return;
-                }
-
-                // Apply the video texture
-                material.pbrMetallicRoughness.setBaseColorTexture(texture);
-                
-                // Adjust material properties for better visibility
-                material.pbrMetallicRoughness.setMetallicFactor(0.0);
-                material.pbrMetallicRoughness.setRoughnessFactor(0.5);
-                material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
-                
-                // Add some emissive properties to make it brighter
-                material.setEmissiveFactor([0.5, 0.5, 0.5]);
-                material.setEmissiveTexture(texture);
-                material.setEmissiveStrength(1.5);
-
-                modelViewer.dismissPoster();
-                modelViewer.model.updateMaterials();
-                startButton.style.display = "none";
-                
-                console.log("Video texture applied successfully");
-            } catch (error) {
-                console.error("Error applying video texture:", error);
-            }
-        }
-
-        // When model loads
-        modelViewer.addEventListener("load", () => {
-            console.log("Model loaded");
-            // Preload but don't apply yet (needs user interaction)
-        });
-
-        // On button click (user interaction)
-        startButton.addEventListener("click", async () => {
-            try {
-                await applyVideoTexture();
-                // Ensure video continues playing
-                if (!isVideoPlaying) {
-                    await videoElement.play();
-                    isVideoPlaying = true;
-                }
-            } catch (e) {
-                console.error("Failed to start video:", e);
-            }
-        });
-
-        // For AR mode
-        modelViewer.addEventListener("ar-status", async (event) => {
-            if (event.detail.status === "session-started") {
-                await applyVideoTexture();
-            }
-        });
-
-        // Handle cases where video might pause
-        videoElement.addEventListener('pause', () => {
-            if (isVideoPlaying) {
-                videoElement.play().catch(e => console.log("Video play interrupted:", e));
-            }
-        });
-
-    </script>
+                </script>
 </body>
 </html>
