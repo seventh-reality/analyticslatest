@@ -1,73 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR with Video Texture</title>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@latest"></script>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
-    model-viewer {
-      width: 100vw;
-      height: 100vh;
-      background-color: #000;
-    }
-    button {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #ff6600;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-  </style>
-</head>
-<body>
+  <title>&lt;model-viewer&gt; template</title>
+  <meta charset="utf-8">
+  <meta name="description" content="&lt;model-viewer&gt; template">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link type="text/css" href="./styles.css" rel="stylesheet" />
 
-<model-viewer id="viewer"
-              src="pl.glb" 
-              alt="3D model with video texture"
-              auto-rotate camera-controls ar 
-              shadow-intensity="1" 
-              ar-modes="webxr" 
-              ar-scale="auto">
-</model-viewer>
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
-<button id="play-video">Start Video Texture</button>
-
-<script type="module">
-  const modelViewer = document.querySelector("#viewer");
-  const playButton = document.getElementById("play-video");
-
-  async function createVideoTexture() {
-    const video = document.createElement("video");
-    video.src = "Video.mp4";
-    video.loop = true;
-    video.muted = true;
-    video.autoplay = true;
-    video.crossOrigin = "anonymous";
-    await video.play();
-    return modelViewer.createTexture(video);
+  <script type="importmap-shim">
+{
+  "imports": {
+    "three": "./model-viewer-301.min.js"
   }
-
-  modelViewer.addEventListener("load", async () => {
-    const material = modelViewer.model.materials[0];
-    const { baseColorTexture } = material.pbrMetallicRoughness;
-    
-    playButton.addEventListener("click", async () => {
-      const videoTexture = await createVideoTexture();
-      baseColorTexture.setTexture(videoTexture);
-    });
-  });
+}
 </script>
 
+  <script type="module-shim" src="model-viewer-301.min.js"></script>
+</head>
+
+<body>
+  <!-- <model-viewer> HTML element -->
+  <model-viewer id="animated" src="pi.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
+    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+    <div class="progress-bar hide" slot="progress-bar">
+      <div class="update-bar"></div>
+    </div>
+    <button slot="ar-button" id="ar-button">
+      View in your space
+    </button>
+    <div id="ar-prompt">
+      <img src="ar_hand_prompt.png">
+    </div>
+  </model-viewer>
+  <script type="module">
+    const modelViewerAnimated = document.querySelector("model-viewer#animated");
+
+    let videoTexture = null;
+
+
+    customElements.whenDefined('model-viewer').then(() => {
+      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+    });
+
+
+
+    modelViewerAnimated.addEventListener("load", async () => {
+
+      const material = modelViewerAnimated.model.materials[0];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+      console.log(modelViewerAnimated.model.materials)
+
+
+      baseColorTexture.setTexture(videoTexture);
+
+    });
+
+  </script>
+  <script src="script.js"></script>
+
 </body>
+
 </html>
