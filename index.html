@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model-Viewer with Video Texture</title>
+    <title>Model-Viewer with Video Texture & AR</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
         body {
@@ -11,6 +11,7 @@
             overflow: hidden;
             height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             background-color: #F5F5F5;
@@ -22,6 +23,17 @@
         video {
             display: none;
         }
+        #start-video {
+            position: absolute;
+            bottom: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -31,6 +43,8 @@
         alt="3D model with video texture" 
         auto-rotate 
         camera-controls 
+        ar 
+        ar-modes="webxr scene-viewer quick-look"
         shadow-intensity="1.0"
         exposure="1.0">
     </model-viewer>
@@ -39,9 +53,12 @@
         <source src="Video.mp4" type="video/mp4">
     </video>
 
+    <button id="start-video">Start Video</button>
+
     <script type="module">
         const modelViewer = document.querySelector('#model');
         const videoElement = document.getElementById('animatedTexture');
+        const startButton = document.getElementById('start-video');
 
         // Ensure video is preloaded
         videoElement.preload = "auto";
@@ -59,14 +76,16 @@
                 }
 
                 // Create a video texture
-                const videoTexture = modelViewer.createVideoTexture(videoElement);
+                const videoTexture = await modelViewer.createVideoTexture(videoElement);
 
                 // Set the texture
                 material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
 
                 // Start the video on user interaction
-                modelViewer.addEventListener("click", () => {
-                    videoElement.play().catch(error => {
+                startButton.addEventListener("click", () => {
+                    videoElement.play().then(() => {
+                        startButton.style.display = "none"; // Hide button after play starts
+                    }).catch(error => {
                         console.error("Video play failed:", error);
                     });
                 });
