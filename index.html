@@ -69,27 +69,40 @@
 
         // ✅ Ensure video is preloaded
         videoElement.preload = "auto";
-        videoElement.muted = true;  
+        videoElement.muted = true;
 
         modelViewer.addEventListener("load", async () => {
             try {
                 await modelViewer.updateComplete;  // ✅ Ensure model is fully loaded
 
-                // ✅ Check if model has a material
-                const material = modelViewer.model.materials[0];
-                if (!material) {
-                    console.error("No material found in model.");
+                // ✅ Access Three.js scene
+                const scene = modelViewer.scene;
+                if (!scene) {
+                    console.error("No scene available");
                     return;
                 }
 
                 // ✅ Create and apply the video texture
-                const videoTexture = await modelViewer.createVideoTexture(videoElement);
-                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+                const videoTexture = new THREE.VideoTexture(videoElement);
+                videoTexture.encoding = THREE.sRGBEncoding;
+                videoTexture.minFilter = THREE.LinearFilter;
+                videoTexture.magFilter = THREE.LinearFilter;
+
+                // ✅ Traverse the model and apply the texture to the first found material
+                scene.traverse((child) => {
+                    if (child.isMesh) {
+                        const material = child.material;
+                        if (material.isMeshStandardMaterial) {
+                            material.map = videoTexture;
+                            material.needsUpdate = true;
+                        }
+                    }
+                });
 
                 // ✅ Start video playback on user interaction
                 startButton.addEventListener("click", () => {
                     videoElement.play().then(() => {
-                        startButton.style.display = "none"; 
+                        startButton.style.display = "none"; // Hide the start button after play
                     }).catch(error => {
                         console.error("Video play failed:", error);
                     });
@@ -98,7 +111,7 @@
                 // ✅ Show AR button when AR is available
                 modelViewer.addEventListener('ar-status', (event) => {
                     if (event.detail.status === 'session-started') {
-                        arButton.hidden = false;
+                        arButton.hidden = false;  // Show AR button when AR session starts
                     }
                 });
 
