@@ -15,6 +15,7 @@
             justify-content: center;
             align-items: center;
             background-color: #F5F5F5;
+            position: relative;
         }
         model-viewer {
             width: 100%;
@@ -23,10 +24,10 @@
         video {
             display: none;
         }
-        #start-video {
+        #start-video, #ar-button {
             position: absolute;
             bottom: 20px;
-            padding: 10px 20px;
+            padding: 12px 18px;
             font-size: 18px;
             background: #ff6600;
             color: white;
@@ -34,54 +35,58 @@
             border-radius: 5px;
             cursor: pointer;
         }
+        #ar-button {
+            right: 20px;
+            background: #007aff;
+        }
     </style>
 </head>
 <body>
 
     <model-viewer id="model" 
-        src="pl.glb" 
+        src="/pl.glb"  <!-- ✅ Host on HTTPS -->
         alt="3D model with video texture" 
         auto-rotate 
         camera-controls 
         ar 
-        ar-modes="webxr scene-viewer quick-look"
+        ar-modes="webxr scene-viewer quick-look"  <!-- ✅ Ensure AR works -->
         shadow-intensity="1.0"
         exposure="1.0">
     </model-viewer>
 
-    <video id="animatedTexture" loop muted playsinline crossorigin="anonymous">
-        <source src="Video.mp4" type="video/mp4">
+    <video id="animatedTexture" loop playsinline crossorigin="anonymous">
+        <source src="https://www.youtube.com/watch?v=egQFAeu6Ihw&t=1386s" type="video/mp4">  <!-- ✅ Ensure video is on HTTPS -->
     </video>
 
     <button id="start-video">Start Video</button>
+    <button id="ar-button" hidden>Enter AR</button>
 
     <script type="module">
         const modelViewer = document.querySelector('#model');
         const videoElement = document.getElementById('animatedTexture');
         const startButton = document.getElementById('start-video');
+        const arButton = document.getElementById('ar-button');
 
         // Ensure video is preloaded
         videoElement.preload = "auto";
+        videoElement.muted = true;  // ✅ Set to true to allow autoplay on most browsers
 
         modelViewer.addEventListener("load", async () => {
             try {
-                // Ensure model is ready
-                await modelViewer.updateComplete;
+                await modelViewer.updateComplete;  // ✅ Ensure model is fully loaded
 
-                // Check if the model has materials
+                // ✅ Ensure model has a material
                 const material = modelViewer.model.materials[0];
                 if (!material) {
                     console.error("No material found in model.");
                     return;
                 }
 
-                // Create a video texture
+                // ✅ Create and apply the video texture
                 const videoTexture = await modelViewer.createVideoTexture(videoElement);
-
-                // Set the texture
                 material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
 
-                // Start the video on user interaction
+                // ✅ Ensure video plays on user interaction
                 startButton.addEventListener("click", () => {
                     videoElement.play().then(() => {
                         startButton.style.display = "none"; // Hide button after play starts
@@ -90,10 +95,23 @@
                     });
                 });
 
+                // ✅ Show AR button when AR is available
+                modelViewer.addEventListener('ar-status', (event) => {
+                    if (event.detail.status === 'session-started') {
+                        arButton.hidden = false;
+                    }
+                });
+
+                // ✅ Trigger AR mode on button click
+                arButton.addEventListener("click", () => {
+                    modelViewer.activateAR();
+                });
+
             } catch (error) {
                 console.error("Error applying video texture:", error);
             }
         });
+
     </script>
 
 </body>
