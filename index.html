@@ -3,324 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Video with Texture Selection</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <title>3D Model with Texture Switching</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
+            text-align: center;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: #f0f0f0;
+            justify-content: center;
+            height: 100vh;
         }
         model-viewer {
             width: 100%;
-            height: 400px;
             max-width: 600px;
-            display: none;
+            height: 400px;
         }
-        #ar-button {
-            background: #4285f4;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            margin: 10px 0;
-            cursor: pointer;
-        }
-        #error-message {
-            color: red;
-            margin-top: 10px;
-            display: none;
-        }
-        #plane-message {
-            color: #4285f4;
-            margin-top: 10px;
-            display: none;
-        }
-        .controls.glass {
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
-            padding: 12px;
-            margin: 16px;
-            backdrop-filter: blur(4px);
+        .controls {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>AR Video with Texture Selection</h1>
-    
-    <button id="ar-button">Start AR Experience</button>
-    <div id="error-message"></div>
-    <div id="plane-message">Move your device to detect surfaces...</div>
-    
-    <model-viewer id="arViewer" 
-        ar 
-        ar-modes="webxr scene-viewer quick-look"
-        camera-controls
-        disable-pan
-        environment-image="neutral"
-        src="https://modelviewer.dev/shared-assets/models/Astronaut.glb">
-        <button slot="ar-button" id="native-ar-button" style="display: none;"></button>
-        <div class="controls glass">
+
+    <model-viewer id="animated" camera-controls touch-action="pan-y"
+        src="pl.glb" ar alt="A 3D model of a sphere">
+        
+        <div class="controls">
             <p>Texture Type</p>
-            <select id="texture-type">
-                <option value="video">Video</option>
+            <select id="type">
                 <option value="lottie">Lottie</option>
+                <option value="video">Video</option>
                 <option value="canvas">Canvas</option>
             </select>
         </div>
     </model-viewer>
 
-    <video id="alphaVideo" loop playsinline muted crossorigin="anonymous" style="display: none;">
-        <source src="Video.mp4" type="video/mp4">
-    </video>
-
     <script type="module">
-        document.addEventListener("DOMContentLoaded", () => {
-            const modelViewer = document.getElementById("arViewer");
-            const video = document.getElementById("alphaVideo");
-            const arButton = document.getElementById("ar-button");
-            const errorMessage = document.getElementById("error-message");
-            const planeMessage = document.getElementById("plane-message");
-            const nativeARButton = document.getElementById("native-ar-button");
-            const textureTypeSelect = document.getElementById("texture-type");
-            
-            let videoPlane = null;
-            let astronaut = null;
-            let animationId = null;
-            let videoTexture = null;
-            let lottieTexture = null;
-            let canvasTexture = null;
-            let currentTexture = null;
+        const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
-            // Check AR support
-            function checkARSupport() {
-                if (!navigator.xr) {
-                    errorMessage.textContent = "AR not supported. Use Chrome on Android or Safari on iOS.";
-                    errorMessage.style.display = 'block';
-                    return false;
-                }
-                return true;
-            }
-            
-            // Initialize video with autoplay settings
-            video.muted = true;
-            video.preload = "auto";
-            video.playsInline = true;
-            video.setAttribute('webkit-playsinline', '');
-            video.setAttribute('playsinline', '');
-            
-            arButton.addEventListener('click', async () => {
-                if (!checkARSupport()) return;
-                
-                try {
-                    modelViewer.style.display = 'block';
-                    arButton.style.display = 'none';
-                    planeMessage.style.display = 'block';
-                    
-                    // Load video first
-                    video.load();
-                    
-                    // Start AR session immediately
-                    nativeARButton.click();
-                    
-                    // Set up AR scene when session starts
-                    modelViewer.addEventListener('ar-status', async (event) => {
-                        if (event.detail.status === 'session-started') {
-                            await setupARScene();
-                        } else if (event.detail.status === 'failed') {
-                            errorMessage.textContent = "Failed to start AR. Try again or check device support.";
-                            errorMessage.style.display = 'block';
-                        }
-                    });
-                    
-                } catch (error) {
-                    console.error("AR Error:", error);
-                    errorMessage.textContent = "Error: " + error.message;
-                    errorMessage.style.display = 'block';
-                }
-            });
-            
-            async function setupARScene() {
-                try {
-                    // Wait for model to fully load
-                    await modelViewer.updateComplete;
-                    
-                    const scene = modelViewer.scene;
-                    if (!scene) throw new Error("No 3D scene found");
-                    
-                    // Create textures
-                    videoTexture = new THREE.VideoTexture(video);
-                    videoTexture.encoding = THREE.sRGBEncoding;
-                    videoTexture.minFilter = THREE.LinearFilter;
-                    videoTexture.magFilter = THREE.LinearFilter;
-                    
-                    lottieTexture = modelViewer.createLottieTexture("https://modelviewer.dev/shared-assets/models/24017-lottie-logo-animation.json", 2);
-                    
-                    canvasTexture = modelViewer.createCanvasTexture();
-                    const canvas = canvasTexture.source.element;
-                    canvas.width = 1600;
-                    canvas.height = 800;
-                    const ctx = canvas.getContext('2d');
-                    ctx.font = "250px sans-serif";
-                    ctx.fillStyle = "#aaa";
-                    ctx.fillText('Canvas 2D!', 0, 400);
-                    canvasTexture.source.update();
-                    
-                    // Create plane for display (16:9 aspect ratio)
-                    const displayWidth = 1.2;
-                    const displayHeight = displayWidth * (9/16);
-                    const displayGeometry = new THREE.PlaneGeometry(displayWidth, displayHeight);
-                    const displayMaterial = new THREE.MeshBasicMaterial({
-                        map: videoTexture, // Start with video texture
-                        side: THREE.DoubleSide,
-                        transparent: false
-                    });
-                    
-                    videoPlane = new THREE.Mesh(displayGeometry, displayMaterial);
-                    videoPlane.visible = false;
-                    scene.add(videoPlane);
-                    
-                    // Find and position astronaut
-                    astronaut = findAstronaut(scene);
-                    if (astronaut) {
-                        astronaut.visible = false;
-                        astronaut.scale.set(0.6, 0.6, 0.6);
-                    }
-                    
-                    // Start video playback
-                    await startVideoPlayback();
-                    
-                    // Set up plane detection
-                    setupPlaneDetection();
-                    
-                    // Set up texture switching
-                    textureTypeSelect.addEventListener('change', async (event) => {
-                        if (!videoPlane) return;
-                        
-                        const material = videoPlane.material;
-                        switch (event.target.value) {
-                            case "video":
-                                material.map = videoTexture;
-                                await video.play().catch(e => console.log("Video play failed:", e));
-                                break;
-                            case "lottie":
-                                material.map = await lottieTexture;
-                                video.pause();
-                                break;
-                            case "canvas":
-                                material.map = canvasTexture;
-                                video.pause();
-                                break;
-                        }
-                        material.needsUpdate = true;
-                    });
-                    
-                } catch (error) {
-                    console.error("Scene Error:", error);
-                    errorMessage.textContent = "Scene setup failed: " + error.message;
-                    errorMessage.style.display = 'block';
-                }
-            }
-            
-            function setupPlaneDetection() {
-                const scene = modelViewer.scene;
-                let planeDetected = false;
-                
-                function checkForPlanes() {
-                    animationId = requestAnimationFrame(checkForPlanes);
-                    
-                    // Get all planes in the scene
-                    const planes = [];
-                    scene.traverse(child => {
-                        if (child.userData.isARPlane) {
-                            planes.push(child);
-                        }
-                    });
-                    
-                    if (planes.length > 0 && !planeDetected) {
-                        planeDetected = true;
-                        planeMessage.style.display = 'none';
-                        
-                        // Use the first detected plane
-                        const detectedPlane = planes[0];
-                        
-                        // Position video plane
-                        videoPlane.position.copy(detectedPlane.position);
-                        videoPlane.position.y += 0.01;
-                        videoPlane.quaternion.copy(detectedPlane.quaternion);
-                        videoPlane.rotateX(-Math.PI/2);
-                        videoPlane.visible = true;
-                        
-                        // Position astronaut
-                        if (astronaut) {
-                            astronaut.position.copy(detectedPlane.position);
-                            astronaut.position.x -= 0.8;
-                            astronaut.position.y += 0.01;
-                            astronaut.quaternion.copy(detectedPlane.quaternion);
-                            astronaut.visible = true;
-                        }
-                    }
-                }
-                
-                checkForPlanes();
-            }
-            
-            async function startVideoPlayback() {
-                // Wait for video to be ready
-                await new Promise((resolve) => {
-                    if (video.readyState >= 3) resolve();
-                    video.addEventListener('canplaythrough', resolve, { once: true });
-                });
-                
-                // Try to play immediately
-                try {
-                    await video.play();
-                    return;
-                } catch (e) {
-                    console.log("Initial play failed, adding click handler");
-                }
-                
-                // Click fallback
-                modelViewer.addEventListener('click', async () => {
-                    try {
-                        await video.play();
-                    } catch (e) {
-                        console.log("Click play failed:", e);
-                    }
-                }, { once: true });
-            }
-            
-            function findAstronaut(scene) {
-                let astronautMesh = null;
-                scene.traverse(child => {
-                    if (child.isMesh && child.name.includes('Astronaut')) {
-                        astronautMesh = child;
-                    }
-                });
-                return astronautMesh;
-            }
-            
-            // Clean up on exit
-            modelViewer.addEventListener('ar-status', (event) => {
-                if (event.detail.status === 'session-ended') {
-                    if (animationId) {
-                        cancelAnimationFrame(animationId);
-                        animationId = null;
-                    }
-                    planeMessage.style.display = 'none';
-                    if (videoTexture) {
-                        videoTexture.dispose();
-                        videoTexture = null;
-                    }
+        let videoTexture = null;
+        let canvasTexture = null;
+        let lottieTexture = null;
+
+        const basePath = window.location.origin + window.location.pathname.replace(/\/$/, ""); // Ensures correct asset paths
+        const glbPath = `${basePath}/assets/sphere.glb`;
+        const videoPath = `${basePath}/assets/lottie-logo.mp4`;
+        const lottiePath = `${basePath}/assets/24017-lottie-logo-animation.json`;
+
+        customElements.whenDefined('model-viewer').then(() => {
+            videoTexture = modelViewerAnimated.createVideoTexture(videoPath);
+        });
+
+        function getCanvasTexture() {
+            if (canvasTexture) return canvasTexture;
+            canvasTexture = modelViewerAnimated.createCanvasTexture();
+            const canvas = canvasTexture.source.element;
+            canvas.width = 1600;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+            ctx.font = "250px sans-serif";
+            ctx.fillStyle = "#aaa";
+            ctx.fillText('Canvas 2D!', 0, 400);
+            canvasTexture.source.update();
+            return canvasTexture;
+        }
+
+        function getLottieTexture() {
+            if (lottieTexture) return lottieTexture;
+            lottieTexture = modelViewerAnimated.createLottieTexture(lottiePath, 2);
+            return lottieTexture;
+        }
+
+        modelViewerAnimated.addEventListener("load", async () => {
+            const material = modelViewerAnimated.model.materials[0];
+            const { baseColorTexture } = material.pbrMetallicRoughness;
+
+            baseColorTexture.setTexture(await getLottieTexture());
+
+            document.querySelector('#type').addEventListener('input', async (event) => {
+                switch (event.target.value) {
+                    case "video":
+                        baseColorTexture.setTexture(videoTexture);
+                        break;
+                    case "canvas":
+                        baseColorTexture.setTexture(getCanvasTexture());
+                        break;
+                    case "lottie":
+                        baseColorTexture.setTexture(await getLottieTexture());
+                        break;
                 }
             });
         });
     </script>
+
 </body>
 </html>
