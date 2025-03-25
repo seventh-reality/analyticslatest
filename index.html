@@ -15,20 +15,59 @@
       height: 100vh;
       background-color: #000;
     }
+    button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #ff6600;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
 
-<model-viewer src="pl.glb" 
+<model-viewer id="viewer"
+              src="pl.glb" 
               alt="3D model with video texture"
               auto-rotate camera-controls ar 
               shadow-intensity="1" 
               ar-modes="webxr" 
               ar-scale="auto">
-  <video slot="video" autoplay loop muted>
-    <source src="Video.mp4" type="video/mp4">
-  </video>
 </model-viewer>
+
+<button id="play-video">Start Video Texture</button>
+
+<script type="module">
+  const modelViewer = document.querySelector("#viewer");
+  const playButton = document.getElementById("play-video");
+
+  let videoTexture;
+
+  async function createVideoTexture() {
+    const texture = await modelViewer.createVideoTexture("Video.mp4");
+    await texture.source.play(); // Ensure video playback starts
+    return texture;
+  }
+
+  modelViewer.addEventListener("load", async () => {
+    const material = modelViewer.model.materials[0];
+    const { baseColorTexture } = material.pbrMetallicRoughness;
+    
+    playButton.addEventListener("click", async () => {
+      if (!videoTexture) {
+        videoTexture = await createVideoTexture();
+      }
+      baseColorTexture.setTexture(videoTexture);
+    });
+  });
+
+</script>
 
 </body>
 </html>
