@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="en">
-  <head>
+<head>
     <title>Model-Viewer with Video Texture</title>
     <meta charset="utf-8">
     <meta name="description" content="Model-Viewer template with video texture">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
     <script type="importmap-shim">
@@ -15,40 +15,40 @@
       }
     }
     </script>
-    
+
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
-    
+
     <style>
-      body {
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background-color: #f0f0f0;
-        position: relative;
-      }
-      model-viewer {
-        width: 100%;
-        height: 100%;
-      }
-      video {
-        display: none;
-      }
-      #start-button {
-        position: absolute;
-        bottom: 20px;
-        padding: 12px;
-        font-size: 18px;
-        background: #ff6600;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-      }
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            position: relative;
+        }
+        model-viewer {
+            width: 100%;
+            height: 100%;
+        }
+        video {
+            display: none;
+        }
+        #start-button {
+            position: absolute;
+            bottom: 20px;
+            padding: 12px;
+            font-size: 18px;
+            background: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
 
     <model-viewer id="animated" 
       camera-controls 
@@ -65,43 +65,52 @@
     <button id="start-button">Start Video</button>
 
     <script type="module">
-      const modelViewerAnimated = document.querySelector("#animated");
-      const videoElement = document.getElementById("videoTexture");
-      const startButton = document.getElementById("start-button");
+        const modelViewerAnimated = document.querySelector("#animated");
+        const videoElement = document.getElementById("videoTexture");
+        const startButton = document.getElementById("start-button");
 
-      let videoTexture = null;
+        let videoTexture = null;
 
-      async function getVideoTexture() {
-          if (!videoTexture) {
-              videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
-          }
-          return videoTexture;
-      }
+        async function getVideoTexture() {
+            if (!videoTexture) {
+                videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
+            }
+            return videoTexture;
+        }
 
-      modelViewerAnimated.addEventListener("scene-graph-ready", async () => {
-          try {
-              const material = modelViewerAnimated.model.materials[0]; // Use the first material
-              const { baseColorTexture } = material.pbrMetallicRoughness;
+        modelViewerAnimated.addEventListener("scene-graph-ready", async () => {
+            try {
+                const material = modelViewerAnimated.model.materials[0]; // Select the first material
+                const { baseColorTexture } = material.pbrMetallicRoughness;
 
-              if (!baseColorTexture) {
-                  console.error("❌ Model does not have a baseColorTexture slot!");
-                  return;
-              }
+                if (!baseColorTexture) {
+                    console.error("❌ Model does not have a baseColorTexture slot!");
+                    return;
+                }
 
-              // ✅ Fix for autoplay restrictions (User interaction needed on mobile)
-              startButton.addEventListener("click", async () => {
-                  videoElement.muted = false; // Unmute video
-                  await videoElement.play();
-                  baseColorTexture.setTexture(await getVideoTexture());
-                  startButton.style.display = "none"; // Hide button after start
-              });
+                // ✅ Fix for autoplay restrictions (User interaction needed on mobile)
+                startButton.addEventListener("click", async () => {
+                    videoElement.muted = false; // Unmute video
+                    await videoElement.play();
+                    baseColorTexture.setTexture(await getVideoTexture());
+                    startButton.style.display = "none"; // Hide button after start
+                });
 
-          } catch (error) {
-              console.error("Error applying video texture:", error);
-          }
-      });
+                // ✅ Try to autoplay on supported devices
+                try {
+                    await videoElement.play();
+                    baseColorTexture.setTexture(await getVideoTexture());
+                    startButton.style.display = "none"; // Hide button if autoplay works
+                } catch (err) {
+                    console.warn("Autoplay failed, user interaction needed.");
+                }
+
+            } catch (error) {
+                console.error("Error applying video texture:", error);
+            }
+        });
 
     </script>
 
-  </body>
+</body>
 </html>
