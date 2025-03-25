@@ -54,11 +54,10 @@
     <button id="start-button">Start Video</button>
 
     <script type="module">
-        const modelViewerAnimated = document.querySelector("#animated");
+        const modelViewer = document.querySelector("#animated");
         const videoElement = document.getElementById("videoTexture");
         const startButton = document.getElementById("start-button");
 
-        // Initialize video with proper attributes
         videoElement.muted = true;
         videoElement.preload = "auto";
         videoElement.playsInline = true;
@@ -66,22 +65,13 @@
 
         let videoTexture = null;
 
-        async function getVideoTexture() {
+        async function createVideoTexture() {
             if (!videoTexture) {
                 try {
-                    // Create video texture
-                    videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
-                    
-                    // Try to play video
-                    await videoElement.play().catch(e => {
-                        console.log("Initial play attempt failed:", e);
-                        startButton.style.display = "block";
-                    });
-                    
+                    videoTexture = await modelViewer.createVideoTexture(videoElement);
                     return videoTexture;
                 } catch (error) {
-                    console.error("Video texture creation failed:", error);
-                    startButton.style.display = "block";
+                    console.error("❌ Video texture creation failed:", error);
                     return null;
                 }
             }
@@ -90,42 +80,39 @@
 
         async function applyVideoTexture() {
             try {
-                const material = modelViewerAnimated.model.materials[0];
+                const material = modelViewer.model.materials[0];
                 const { baseColorTexture } = material.pbrMetallicRoughness;
 
                 if (!baseColorTexture) {
-                    console.error("Model does not have a baseColorTexture slot!");
+                    console.error("❌ No baseColorTexture found!");
                     return;
                 }
 
-                const texture = await getVideoTexture();
+                const texture = await createVideoTexture();
                 if (texture) {
                     baseColorTexture.setTexture(texture);
+                    modelViewer.model.updateMaterials();
+                    videoElement.play();
                     startButton.style.display = "none";
                 }
             } catch (error) {
-                console.error("Error applying video texture:", error);
-                startButton.style.display = "block";
+                console.error("❌ Error applying video texture:", error);
             }
         }
 
-        // When model is ready
-        modelViewerAnimated.addEventListener("load", async () => {
-            // Try to autoplay first
+        modelViewer.addEventListener("load", async () => {
             try {
                 await applyVideoTexture();
             } catch (e) {
-                console.log("Initial texture application failed:", e);
+                console.warn("❌ Initial texture application failed:", e);
             }
         });
 
-        // Manual start button
         startButton.addEventListener("click", async () => {
             await applyVideoTexture();
         });
 
-        // Handle AR mode
-        modelViewerAnimated.addEventListener("ar-status", async (event) => {
+        modelViewer.addEventListener("ar-status", async (event) => {
             if (event.detail.status === "session-started") {
                 await applyVideoTexture();
             }
