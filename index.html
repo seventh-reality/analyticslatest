@@ -51,9 +51,9 @@
         let lottieTexture = null;
 
         const basePath = window.location.origin + window.location.pathname.replace(/\/$/, ""); // Ensures correct asset paths
-        const glbPath = `${basePath}pl.glb`;
-        const videoPath = `${basePath}Video.mp4`;
-        const lottiePath = `${basePath}Lottie Lego.json`;
+        const glbPath = `${basePath}./pl.glb`;
+        const videoPath = `${basePath}./Video.mp4`;
+        const lottiePath = `${basePath}./Lottie Lego.json`;
 
         customElements.whenDefined('model-viewer').then(() => {
             videoTexture = modelViewerAnimated.createVideoTexture(videoPath);
