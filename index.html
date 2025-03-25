@@ -44,68 +44,82 @@
 <body>
 
     <model-viewer id="animated" camera-controls touch-action="pan-y" src="pl.glb" ar alt="A 3D model of a duck">
-                  <div class="controls glass">
-                    <p>Texture Type</p>
-                    <select id="type">
-                      <option value="lottie">Lottie</option>
-                      <option value="video">Video</option>
-                      <option value="canvas">Canvas</option>
-                    </select>
-                  </div>
-                </model-viewer>
-                <script type="module">
-                  const modelViewerAnimated = document.querySelector("model-viewer#animated");
+        <div class="controls glass">
+            <p>Texture Type</p>
+            <select id="type">
+                <option value="lottie">Lottie</option>
+                <option value="video">Video</option>
+                <option value="canvas">Canvas</option>
+            </select>
+        </div>
+    </model-viewer>
 
-                  let videoTexture = null;
-                  let canvasTexture = null;
-                  let lottieTexture = null;
+    <video id="videoTexture" loop playsinline muted crossorigin="anonymous">
+        <source src="logo.mp4" type="video/mp4">
+    </video>
 
-                  customElements.whenDefined('model-viewer').then(() => {
-                    videoTexture = modelViewerAnimated.createVideoTexture("logo.mp4");
-                  });
+    <script type="module">
+        const modelViewerAnimated = document.querySelector("model-viewer#animated");
+        const videoElement = document.getElementById("videoTexture");
+        let videoTexture = null;
+        let canvasTexture = null;
+        let lottieTexture = null;
 
-                  function getCanvasTexture() {
-                    if (canvasTexture) return canvasTexture;
-                    canvasTexture = modelViewerAnimated.createCanvasTexture();
-                    const canvas = canvasTexture.source.element;
-                    canvas.width = 1600;
-                    canvas.height = 800;
-                    const ctx = canvas.getContext('2d');
-                    ctx.font = "250px sans-serif";
-                    ctx.fillStyle = "#aaa";
-                    ctx.fillText('Canvas 2D!', 0, 400);
-                    canvasTexture.source.update();
-                    return canvasTexture;
-                  }
+        async function getVideoTexture() {
+            if (!videoTexture) {
+                videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
+            }
+            return videoTexture;
+        }
 
-                  function getLottieTexture() {
-                    if (lottieTexture) return lottieTexture;
-                    lottieTexture = modelViewerAnimated.createLottieTexture("LottieLego.json", 2);
-                    return lottieTexture;
-                  }
+        function getCanvasTexture() {
+            if (canvasTexture) return canvasTexture;
+            canvasTexture = modelViewerAnimated.createCanvasTexture();
+            const canvas = canvasTexture.source.element;
+            canvas.width = 1600;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+            ctx.font = "250px sans-serif";
+            ctx.fillStyle = "#aaa";
+            ctx.fillText('Canvas 2D!', 0, 400);
+            canvasTexture.source.update();
+            return canvasTexture;
+        }
 
-                  modelViewerAnimated.addEventListener("load", async () => {
+        function getLottieTexture() {
+            if (lottieTexture) return lottieTexture;
+            lottieTexture = modelViewerAnimated.createLottieTexture("LottieLego.json", 2);
+            return lottieTexture;
+        }
 
-                    const material = modelViewerAnimated.model.materials[0];
-                    const { baseColorTexture } = material.pbrMetallicRoughness;
+        modelViewerAnimated.addEventListener("load", async () => {
+            const material = modelViewerAnimated.model.materials[0];
+            const { baseColorTexture } = material.pbrMetallicRoughness;
 
-                    baseColorTexture.setTexture(await getLottieTexture());
+            // ✅ Automatically start the video when the model loads
+            videoElement.play().then(async () => {
+                baseColorTexture.setTexture(await getVideoTexture());
+            }).catch(error => {
+                console.error("Video play failed:", error);
+            });
 
-                    document.querySelector('#type').addEventListener('input', async (event) => {
-                      switch (event.target.value) {
-                        case "video":
-                          baseColorTexture.setTexture(videoTexture);
-                          break;
-                        case "canvas":
-                          baseColorTexture.setTexture(getCanvasTexture());
-                          break;
-                        case "lottie":
-                          baseColorTexture.setTexture(await getLottieTexture());
-                          break;
-                      }
-                    });
-                  });
+            document.querySelector('#type').addEventListener('input', async (event) => {
+                switch (event.target.value) {
+                    case "video":
+                        videoElement.play();  // ✅ Ensure the video starts when switching
+                        baseColorTexture.setTexture(await getVideoTexture());
+                        break;
+                    case "canvas":
+                        baseColorTexture.setTexture(getCanvasTexture());
+                        break;
+                    case "lottie":
+                        baseColorTexture.setTexture(await getLottieTexture());
+                        break;
+                }
+            });
+        });
 
-                </script>
+    </script>
+
 </body>
 </html>
