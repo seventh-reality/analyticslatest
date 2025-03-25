@@ -92,15 +92,13 @@
                         }
                     }
                     
-                    // Start video playback
-                    videoElement.play().catch(e => {
-                        console.error("Video play failed:", e);
-                        // Fallback: play on click
-                        modelViewer.addEventListener('click', () => {
-                            videoElement.play().catch(e => console.log("Click play failed:", e));
-                        }, { once: true });
+                    // Start video playback (trigger on user click if necessary)
+                    modelViewer.addEventListener('click', () => {
+                        videoElement.play().catch(e => {
+                            console.error("Video play failed:", e);
+                        });
                     });
-                    
+
                     // Animation loop to update texture
                     function animate() {
                         requestAnimationFrame(animate);
