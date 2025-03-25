@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Video with Surface Tracking</title>
+    <title>AR Video with Texture Selection</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -42,10 +42,17 @@
             margin-top: 10px;
             display: none;
         }
+        .controls.glass {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 16px;
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
 <body>
-    <h1>AR Video with Surface Tracking</h1>
+    <h1>AR Video with Texture Selection</h1>
     
     <button id="ar-button">Start AR Experience</button>
     <div id="error-message"></div>
@@ -59,13 +66,21 @@
         environment-image="neutral"
         src="https://modelviewer.dev/shared-assets/models/Astronaut.glb">
         <button slot="ar-button" id="native-ar-button" style="display: none;"></button>
+        <div class="controls glass">
+            <p>Texture Type</p>
+            <select id="texture-type">
+                <option value="video">Video</option>
+                <option value="lottie">Lottie</option>
+                <option value="canvas">Canvas</option>
+            </select>
+        </div>
     </model-viewer>
 
     <video id="alphaVideo" loop playsinline muted crossorigin="anonymous" style="display: none;">
         <source src="Video.mp4" type="video/mp4">
     </video>
 
-    <script>
+    <script type="module">
         document.addEventListener("DOMContentLoaded", () => {
             const modelViewer = document.getElementById("arViewer");
             const video = document.getElementById("alphaVideo");
@@ -73,11 +88,15 @@
             const errorMessage = document.getElementById("error-message");
             const planeMessage = document.getElementById("plane-message");
             const nativeARButton = document.getElementById("native-ar-button");
+            const textureTypeSelect = document.getElementById("texture-type");
             
             let videoPlane = null;
             let astronaut = null;
             let animationId = null;
             let videoTexture = null;
+            let lottieTexture = null;
+            let canvasTexture = null;
+            let currentTexture = null;
 
             // Check AR support
             function checkARSupport() {
@@ -135,23 +154,35 @@
                     const scene = modelViewer.scene;
                     if (!scene) throw new Error("No 3D scene found");
                     
-                    // Create video texture
+                    // Create textures
                     videoTexture = new THREE.VideoTexture(video);
                     videoTexture.encoding = THREE.sRGBEncoding;
                     videoTexture.minFilter = THREE.LinearFilter;
                     videoTexture.magFilter = THREE.LinearFilter;
                     
-                    // Create plane for video (16:9 aspect ratio)
-                    const videoWidth = 1.2;
-                    const videoHeight = videoWidth * (9/16);
-                    const videoGeometry = new THREE.PlaneGeometry(videoWidth, videoHeight);
-                    const videoMaterial = new THREE.MeshBasicMaterial({
-                        map: videoTexture,
+                    lottieTexture = modelViewer.createLottieTexture("https://modelviewer.dev/shared-assets/models/24017-lottie-logo-animation.json", 2);
+                    
+                    canvasTexture = modelViewer.createCanvasTexture();
+                    const canvas = canvasTexture.source.element;
+                    canvas.width = 1600;
+                    canvas.height = 800;
+                    const ctx = canvas.getContext('2d');
+                    ctx.font = "250px sans-serif";
+                    ctx.fillStyle = "#aaa";
+                    ctx.fillText('Canvas 2D!', 0, 400);
+                    canvasTexture.source.update();
+                    
+                    // Create plane for display (16:9 aspect ratio)
+                    const displayWidth = 1.2;
+                    const displayHeight = displayWidth * (9/16);
+                    const displayGeometry = new THREE.PlaneGeometry(displayWidth, displayHeight);
+                    const displayMaterial = new THREE.MeshBasicMaterial({
+                        map: videoTexture, // Start with video texture
                         side: THREE.DoubleSide,
                         transparent: false
                     });
                     
-                    videoPlane = new THREE.Mesh(videoGeometry, videoMaterial);
+                    videoPlane = new THREE.Mesh(displayGeometry, displayMaterial);
                     videoPlane.visible = false;
                     scene.add(videoPlane);
                     
@@ -167,6 +198,28 @@
                     
                     // Set up plane detection
                     setupPlaneDetection();
+                    
+                    // Set up texture switching
+                    textureTypeSelect.addEventListener('change', async (event) => {
+                        if (!videoPlane) return;
+                        
+                        const material = videoPlane.material;
+                        switch (event.target.value) {
+                            case "video":
+                                material.map = videoTexture;
+                                await video.play().catch(e => console.log("Video play failed:", e));
+                                break;
+                            case "lottie":
+                                material.map = await lottieTexture;
+                                video.pause();
+                                break;
+                            case "canvas":
+                                material.map = canvasTexture;
+                                video.pause();
+                                break;
+                        }
+                        material.needsUpdate = true;
+                    });
                     
                 } catch (error) {
                     console.error("Scene Error:", error);
