@@ -1,201 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model-Viewer with Auto-Playing Video Texture</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: #F5F5F5;
-            position: relative;
-        }
-        model-viewer {
-            width: 100%;
-            height: 100%;
-        }
-        video {
-            display: none;
-        }
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255,255,255,0.8);
-            padding: 10px;
-            border-radius: 5px;
-        }
-    </style>
-</head>
-<body>
+  <head>
+    <title>&lt;model-viewer&gt; template</title>
+    <meta charset="utf-8">
+    <meta name="description" content="&lt;model-viewer&gt; template">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js">
+      
+    </script>
 
-<model-viewer id="animated" 
+<script type="importmap-shim">
+{
+  "imports": {
+    "three": "https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"
+  }
+}
+</script>
+<script type="module" 
+src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js">
+</script>
+  </head>
+  <body>
+    <model-viewer id="animated" 
     camera-controls 
     touch-action="pan-y" 
-    src="pl.glb" 
-    ar 
-    ar-modes="webxr scene-viewer quick-look"
-    alt="A 3D model with video texture">
-    
-    <div class="controls">
-        <p>Texture Type</p>
-        <select id="type">
-            <option value="video">Video</option>
-            <option value="lottie">Lottie</option>
-            <option value="canvas">Canvas</option>
-        </select>
-    </div>
-    <button slot="ar-button" style="position: absolute; bottom: 20px; right: 20px;">
-        View in AR
-    </button>
-</model-viewer>
-
-<video id="videoTexture" loop playsinline muted crossorigin="anonymous">
-    <source src="Video.mp4" type="video/mp4">
-</video>
-
-<script type="module">
-    const modelViewer = document.querySelector("#animated");
-    const videoElement = document.getElementById("videoTexture");
-    const textureSelect = document.querySelector('#type');
-    
+    src="pi.glb" 
+    ar >
+    </model-viewer>
+    <script type="module">
+    const modelViewerAnimated = document.querySelector("model-viewer#animated");
     let videoTexture = null;
-    let canvasTexture = null;
-    let lottieTexture = null;
-    let currentTextureType = 'video';
-
-    // Initialize video with autoplay settings
-    videoElement.muted = true;
-    videoElement.preload = "auto";
-    videoElement.playsInline = true;
-    videoElement.setAttribute('webkit-playsinline', '');
-    videoElement.load();
-
-    async function getVideoTexture() {
-        if (!videoTexture) {
-            try {
-                videoTexture = await modelViewer.createVideoTexture(videoElement);
-                // Ensure video is playing
-                await videoElement.play().catch(e => {
-                    console.log("Initial play attempt failed:", e);
-                    // Fallback: play on user interaction
-                    document.addEventListener('click', () => {
-                        videoElement.play().catch(e => console.log("Click play failed:", e));
-                    }, { once: true });
-                });
-            } catch (error) {
-                console.error("Video texture creation failed:", error);
-            }
-        }
-        return videoTexture;
-    }
-
-    function getCanvasTexture() {
-        if (!canvasTexture) {
-            canvasTexture = modelViewer.createCanvasTexture();
-            const canvas = canvasTexture.source.element;
-            canvas.width = 1600;
-            canvas.height = 800;
-            const ctx = canvas.getContext('2d');
-            ctx.font = "250px sans-serif";
-            ctx.fillStyle = "#aaa";
-            ctx.fillText('Canvas 2D!', 0, 400);
-            canvasTexture.source.update();
-        }
-        return canvasTexture;
-    }
-
-    async function getLottieTexture() {
-        if (!lottieTexture) {
-            try {
-                lottieTexture = await modelViewer.createLottieTexture("https://modelviewer.dev/shared-assets/models/24017-lottie-logo-animation.json", 1);
-            } catch (error) {
-                console.error("Lottie texture loading failed:", error);
-            }
-        }
-        return lottieTexture;
-    }
-
-    async function applyTexture(type) {
-        if (!modelViewer.model || !modelViewer.model.materials[0]) return;
-        
-        const material = modelViewer.model.materials[0];
-        const { baseColorTexture } = material.pbrMetallicRoughness;
-        
-        if (!baseColorTexture) {
-            console.error("Model does not have a baseColorTexture slot!");
-            return;
-        }
-
-        try {
-            currentTextureType = type;
-            
-            switch (type) {
-                case "video":
-                    const vTexture = await getVideoTexture();
-                    if (vTexture) {
-                        baseColorTexture.setTexture(vTexture);
-                        await videoElement.play().catch(e => console.log("Video play failed:", e));
-                    }
-                    break;
-                    
-                case "lottie":
-                    const lTexture = await getLottieTexture();
-                    if (lTexture) {
-                        baseColorTexture.setTexture(lTexture);
-                        videoElement.pause();
-                    }
-                    break;
-                    
-                case "canvas":
-                    baseColorTexture.setTexture(getCanvasTexture());
-                    videoElement.pause();
-                    break;
-            }
-        } catch (error) {
-            console.error("Error applying texture:", error);
-        }
-    }
-
-    // Set up texture switching
-    textureSelect.addEventListener('change', (event) => {
-        applyTexture(event.target.value);
+    customElements.whenDefined('model-viewer').then(() => {
+      videoTexture = modelViewerAnimated.createVideoTexture("logo.mp4");
     });
-
-    // Set up model loading and AR
-    modelViewer.addEventListener('load', async () => {
-        try {
-            // Apply video texture by default
-            await applyTexture('video');
-            
-            // Handle AR session start
-            modelViewer.addEventListener('ar-status', async (event) => {
-                if (event.detail.status === 'session-started') {
-                    // Re-apply current texture in AR mode
-                    await applyTexture(currentTextureType);
-                }
-            });
-            
-        } catch (error) {
-            console.error("Model loading error:", error);
-        }
-    });
-
-    // Ensure video plays when AR starts
-    modelViewer.addEventListener('ar-status', (event) => {
-        if (event.detail.status === 'session-started' && currentTextureType === 'video') {
-            videoElement.play().catch(e => console.log("AR video play failed:", e));
-        }
-    });
-
-</script>
-
-</body>
+    modelViewerAnimated.addEventListener("load", async () => {
+    
+      const material = modelViewerAnimated.model.materials[8];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+     baseColorTexture.setTexture(videoTexture);
+    })
+    </script>
+  </body>
 </html>
