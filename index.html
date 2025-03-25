@@ -1,109 +1,45 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <title>Model-Viewer with Video Texture</title>
+  <head>
+    <title>&lt;model-viewer&gt; template</title>
     <meta charset="utf-8">
-    <meta name="description" content="Model-Viewer template with video texture">
+    <meta name="description" content="&lt;model-viewer&gt; template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-            position: relative;
-        }
-        model-viewer {
-            width: 100%;
-            height: 100%;
-        }
-        video {
-            display: none;
-        }
-        #start-button {
-            position: absolute;
-            bottom: 20px;
-            padding: 12px;
-            font-size: 18px;
-            background: #ff6600;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 10;
-        }
-    </style>
-</head>
-<body>
-    <model-viewer id="animated" camera-controls touch-action="pan-y" 
-                  src="https://modelviewer.dev/shared-assets/models/sphere.glb" 
-                  ar alt="A 3D model of a sphere">
-        <div class="controls glass">
-            <p>Texture Type</p>
-            <select id="type">
-                <option value="lottie">Lottie</option>
-                <option value="video">Video</option>
-                <option value="canvas">Canvas</option>
-            </select>
-        </div>
-    </model-viewer>
-    
-    <script type="module">
-        const modelViewer = document.querySelector("model-viewer#animated");
-        let videoTexture = null;
-        let canvasTexture = null;
-        let lottieTexture = null;
-
-        async function createVideoTexture() {
-            const texture = await modelViewer.createVideoTexture("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
-            await texture.source.play(); // Ensure the video starts playing
-            return texture;
-        }
-
-        function getCanvasTexture() {
-            if (canvasTexture) return canvasTexture;
-            canvasTexture = modelViewer.createCanvasTexture();
-            const canvas = canvasTexture.source.element;
-            canvas.width = 1600;
-            canvas.height = 800;
-            const ctx = canvas.getContext('2d');
-            ctx.font = "250px sans-serif";
-            ctx.fillStyle = "#aaa";
-            ctx.fillText('Canvas 2D!', 0, 400);
-            canvasTexture.source.update();
-            return canvasTexture;
-        }
-
-        async function getLottieTexture() {
-            if (lottieTexture) return lottieTexture;
-            lottieTexture = await modelViewer.createLottieTexture("LottieLego.json", 2);
-            return lottieTexture;
-        }
-
-        modelViewer.addEventListener("load", async () => {
-            const material = modelViewer.model.materials[0];
-            const { baseColorTexture } = material.pbrMetallicRoughness;
-            
-            videoTexture = await createVideoTexture();
-            baseColorTexture.setTexture(await getLottieTexture());
-
-            document.querySelector('#type').addEventListener('input', async (event) => {
-                switch (event.target.value) {
-                    case "video":
-                        baseColorTexture.setTexture(videoTexture);
-                        break;
-                    case "canvas":
-                        baseColorTexture.setTexture(getCanvasTexture());
-                        break;
-                    case "lottie":
-                        baseColorTexture.setTexture(await getLottieTexture());
-                        break;
-                }
-            });
-        });
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js">
+      
     </script>
-</body>
+
+<script type="importmap-shim">
+{
+  "imports": {
+    "three": "https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"
+  }
+}
+</script>
+<script type="module" 
+src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js">
+</script>
+  </head>
+  <body>
+    <model-viewer id="animated" 
+    camera-controls 
+    touch-action="pan-y" 
+    src="p.glb" 
+    ar >
+    </model-viewer>
+    <script type="module">
+    const modelViewerAnimated = document.querySelector("model-viewer#animated");
+    let videoTexture = null;
+    customElements.whenDefined('model-viewer').then(() => {
+      videoTexture = modelViewerAnimated.createVideoTexture("logo.mp4");
+    });
+    modelViewerAnimated.addEventListener("load", async () => {
+    
+      const material = modelViewerAnimated.model.materials[8];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+     baseColorTexture.setTexture(videoTexture);
+    })
+    </script>
+  </body>
 </html>
