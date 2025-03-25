@@ -43,18 +43,22 @@
 </head>
 <body>
 
-    <model-viewer id="model" 
-        src="pl.glb"  <!-- ✅ Must be HTTPS -->
-        alt="3D model with video texture" 
-        auto-rotate 
-        camera-controls 
-        ar 
-        ar-modes="webxr scene-viewer quick-look"  <!-- ✅ Ensures cross-device compatibility -->
-        ar-scale="fixed"  <!-- ✅ Helps with proper scaling -->
-        quick-look-browsers="safari chrome"
-        shadow-intensity="1.0"
-        exposure="1.0">
-    </model-viewer>
+    <model-viewer 
+    id="model" 
+    src="/pl.glb"  <!-- ✅ Must be HTTPS -->
+    alt="3D model with video texture"
+    auto-rotate 
+    camera-controls 
+    ar 
+    ar-modes="webxr scene-viewer quick-look"  <!-- ✅ Ensure AR works across devices -->
+    ar-scale="fixed"  <!-- ✅ Helps with scaling in AR -->
+    quick-look-browsers="safari"  <!-- ✅ Safari only supports Quick Look -->
+    shadow-intensity="1"
+    exposure="1"
+    disable-zoom  <!-- Optional: Prevents users from zooming out too far -->
+    min-camera-orbit="auto auto 5m"  <!-- Helps with better zoom control -->
+    max-camera-orbit="auto auto 10m">
+</model-viewer>
 
     <video id="animatedTexture" loop playsinline crossorigin="anonymous">
         <source src="Video.mp4" type="video/mp4">  <!-- ✅ Must be direct MP4 URL -->
