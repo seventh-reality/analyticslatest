@@ -68,6 +68,7 @@
         async function createVideoTexture() {
             if (!videoTexture) {
                 try {
+                    await videoElement.play(); // Ensure video is playing
                     videoTexture = await modelViewer.createVideoTexture(videoElement);
                     return videoTexture;
                 } catch (error) {
@@ -80,7 +81,7 @@
 
         async function applyVideoTexture() {
             try {
-                const material = modelViewer.model.materials[0];
+                const material = modelViewer.model.materials[0]; // Get the first material
                 const { baseColorTexture } = material.pbrMetallicRoughness;
 
                 if (!baseColorTexture) {
@@ -91,8 +92,14 @@
                 const texture = await createVideoTexture();
                 if (texture) {
                     baseColorTexture.setTexture(texture);
-                    modelViewer.model.updateMaterials();
-                    videoElement.play();
+
+                    // Set emissive properties to ensure the video texture is visible
+                    material.pbrMetallicRoughness.metallicFactor = 0.0;
+                    material.pbrMetallicRoughness.roughnessFactor = 1.0;
+                    material.setEmissiveFactor([1, 1, 1]); // Full white emissive
+                    material.setEmissiveStrength(1.5); // Increase brightness
+                    
+                    modelViewer.model.updateMaterials(); // Apply material changes
                     startButton.style.display = "none";
                 }
             } catch (error) {
