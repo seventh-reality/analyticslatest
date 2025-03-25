@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model-Viewer Animated Texture</title>
-    <script type="module">
-        import '@google/model-viewer';
-    </script>
+    <title>Model-Viewer with Video Texture</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -15,15 +14,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: #F5F5F5;
         }
-
         model-viewer {
             width: 100%;
             height: 100%;
         }
-
         video {
-            display: none; /* Hide the video element */
+            display: none;
         }
     </style>
 </head>
@@ -31,42 +29,95 @@
 
 <model-viewer id="model" 
     src="pl.glb" 
-    alt="3D model with animated texture" 
+    alt="3D model with video texture" 
     auto-rotate 
     camera-controls 
-    background-color="#F5F5F5"
-    shadow-intensity="1.0" 
-    style="width: 100%; height: 100%;"
-    animation-name="rotate"
+    shadow-intensity="1.0"
     exposure="1.0">
 </model-viewer>
 
-<video id="animatedTexture" autoplay loop muted>
+<video id="animatedTexture" loop muted playsinline crossorigin="anonymous">
     <source src="Video.mp4" type="video/mp4">
-    Your browser does not support the video tag.
 </video>
 
 <script>
-    const modelViewer = document.querySelector('model-viewer');
-    const videoElement = document.getElementById('animatedTexture');
-
-    modelViewer.addEventListener('load', () => {
-        // Wait for the model to load
-        modelViewer.addEventListener('load', () => {
-            // Get the material and apply the video texture (this won't work directly via model-viewer)
-            // model-viewer does not expose a direct method to update textures
-            const material = modelViewer.shadowRoot.querySelector('model-viewer').material;
-
-            // Set the texture of the material to the video texture
-            const texture = new THREE.VideoTexture(videoElement);
-
-            // Update the model material's map with the video texture
-            material.map = texture;
-            material.needsUpdate = true;
+    document.addEventListener('DOMContentLoaded', () => {
+        const modelViewer = document.querySelector('#model');
+        const videoElement = document.getElementById('animatedTexture');
+        
+        // Initialize video
+        videoElement.muted = true;
+        videoElement.preload = "auto";
+        videoElement.playsInline = true;
+        
+        // Wait for model to load
+        modelViewer.addEventListener('load', async () => {
+            try {
+                // Wait for model-viewer to be ready
+                await modelViewer.updateComplete;
+                
+                // Get the Three.js scene
+                const scene = modelViewer.scene;
+                if (!scene) {
+                    console.error("Could not access Three.js scene");
+                    return;
+                }
+                
+                // Create video texture
+                const videoTexture = new THREE.VideoTexture(videoElement);
+                videoTexture.encoding = THREE.sRGBEncoding;
+                videoTexture.minFilter = THREE.LinearFilter;
+                videoTexture.magFilter = THREE.LinearFilter;
+                
+                // Find the first material in the model
+                let targetMaterial = null;
+                scene.traverse((child) => {
+                    if (child.isMesh && !targetMaterial) {
+                        targetMaterial = child.material;
+                    }
+                });
+                
+                if (targetMaterial) {
+                    // Apply video texture to material
+                    if (targetMaterial.isMeshStandardMaterial) {
+                        targetMaterial.map = videoTexture;
+                        targetMaterial.needsUpdate = true;
+                    } else if (targetMaterial.materials) {
+                        // Handle multi-material objects
+                        for (const material of targetMaterial.materials) {
+                            if (material.isMeshStandardMaterial) {
+                                material.map = videoTexture;
+                                material.needsUpdate = true;
+                            }
+                        }
+                    }
+                    
+                    // Start video playback
+                    videoElement.play().catch(e => {
+                        console.error("Video play failed:", e);
+                        // Fallback: play on click
+                        modelViewer.addEventListener('click', () => {
+                            videoElement.play().catch(e => console.log("Click play failed:", e));
+                        }, { once: true });
+                    });
+                    
+                    // Animation loop to update texture
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        if (videoElement.readyState >= videoElement.HAVE_ENOUGH_DATA) {
+                            videoTexture.needsUpdate = true;
+                        }
+                    }
+                    animate();
+                    
+                } else {
+                    console.error("No suitable material found in model");
+                }
+                
+            } catch (error) {
+                console.error("Error applying video texture:", error);
+            }
         });
-
-        // Play the video after loading the model
-        videoElement.play();
     });
 </script>
 
