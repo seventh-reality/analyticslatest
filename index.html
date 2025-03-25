@@ -47,12 +47,15 @@
   const modelViewer = document.querySelector("#viewer");
   const playButton = document.getElementById("play-video");
 
-  let videoTexture;
-
   async function createVideoTexture() {
-    const texture = await modelViewer.createVideoTexture("Video.mp4");
-    await texture.source.play(); // Ensure video playback starts
-    return texture;
+    const video = document.createElement("video");
+    video.src = "Video.mp4";
+    video.loop = true;
+    video.muted = true;
+    video.autoplay = true;
+    video.crossOrigin = "anonymous";
+    await video.play();
+    return modelViewer.createTexture(video);
   }
 
   modelViewer.addEventListener("load", async () => {
@@ -60,13 +63,10 @@
     const { baseColorTexture } = material.pbrMetallicRoughness;
     
     playButton.addEventListener("click", async () => {
-      if (!videoTexture) {
-        videoTexture = await createVideoTexture();
-      }
+      const videoTexture = await createVideoTexture();
       baseColorTexture.setTexture(videoTexture);
     });
   });
-
 </script>
 
 </body>
