@@ -24,10 +24,10 @@
         video {
             display: none;
         }
-        #start-button {
+        #start-video, #ar-button {
             position: absolute;
             bottom: 20px;
-            padding: 12px;
+            padding: 12px 18px;
             font-size: 18px;
             background: #ff6600;
             color: white;
@@ -35,44 +35,77 @@
             border-radius: 5px;
             cursor: pointer;
         }
+        #ar-button {
+            right: 20px;
+            background: #007aff;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 3D Model Viewer -->
     <model-viewer id="animated" 
         camera-controls 
         touch-action="pan-y" 
         src="pl.glb" 
         ar 
         alt="A 3D model with video & Lottie texture">
+        
+        <div class="controls glass">
+            <p>Texture Type</p>
+            <select id="type">
+                <option value="lottie">Lottie</option>
+                <option value="video">Video</option>
+                <option value="canvas">Canvas</option>
+            </select>
+        </div>
     </model-viewer>
 
-    <!-- Video Element -->
     <video id="videoTexture" loop playsinline muted crossorigin="anonymous">
         <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
     </video>
 
-    <!-- Button to Start Video (Required for Mobile Autoplay Restrictions) -->
-    <button id="start-button">Start Video</button>
-
     <script type="module">
-        const modelViewer = document.querySelector("#animated");
+        const modelViewerAnimated = document.querySelector("#animated");
         const videoElement = document.getElementById("videoTexture");
-        const startButton = document.getElementById("start-button");
-
         let videoTexture = null;
+        let canvasTexture = null;
+        let lottieTexture = null;
 
         async function getVideoTexture() {
             if (!videoTexture) {
-                videoTexture = await modelViewer.createVideoTexture(videoElement);
+                videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
             }
             return videoTexture;
         }
 
-        modelViewer.addEventListener("scene-graph-ready", async () => {
+        function getCanvasTexture() {
+            if (canvasTexture) return canvasTexture;
+            canvasTexture = modelViewerAnimated.createCanvasTexture();
+            const canvas = canvasTexture.source.element;
+            canvas.width = 1600;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+            ctx.font = "250px sans-serif";
+            ctx.fillStyle = "#aaa";
+            ctx.fillText('Canvas 2D!', 0, 400);
+            canvasTexture.source.update();
+            return canvasTexture;
+        }
+
+        async function getLottieTexture() {
+            if (!lottieTexture) {
+                try {
+                    lottieTexture = await modelViewerAnimated.createLottieTexture("LottieLego.json", 1);
+                } catch (error) {
+                    console.error("Lottie texture loading failed:", error);
+                }
+            }
+            return lottieTexture;
+        }
+
+        modelViewerAnimated.addEventListener("load", async () => {
             try {
-                const material = modelViewer.model.materials[0];
+                const material = modelViewerAnimated.model.materials[0];
                 const { baseColorTexture } = material.pbrMetallicRoughness;
 
                 if (!baseColorTexture) {
@@ -80,18 +113,32 @@
                     return;
                 }
 
-                // ✅ Set up user interaction for autoplay fix
-                startButton.addEventListener("click", async () => {
-                    videoElement.muted = false; // Enable audio if needed
-                    await videoElement.play();
-                    baseColorTexture.setTexture(await getVideoTexture());
-                    startButton.style.display = "none"; // Hide button after start
+                // ✅ Ensure video starts before setting texture
+                await videoElement.play();
+                baseColorTexture.setTexture(await getVideoTexture());
+
+                document.querySelector('#type').addEventListener('input', async (event) => {
+                    switch (event.target.value) {
+                        case "video":
+                            await videoElement.play();
+                            baseColorTexture.setTexture(await getVideoTexture());
+                            break;
+                        case "canvas":
+                            baseColorTexture.setTexture(getCanvasTexture());
+                            break;
+                        case "lottie":
+                            const lottieTex = await getLottieTexture();
+                            if (lottieTex) baseColorTexture.setTexture(lottieTex);
+                            else console.error("Lottie texture failed to load!");
+                            break;
+                    }
                 });
 
             } catch (error) {
-                console.error("Error applying video texture:", error);
+                console.error("Error applying texture:", error);
             }
         });
+
     </script>
 
 </body>
