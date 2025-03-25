@@ -32,7 +32,7 @@ src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.j
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
     let videoTexture = null;
     customElements.whenDefined('model-viewer').then(() => {
-      videoTexture = modelViewerAnimated.createVideoTexture("logo.mp4");
+      videoTexture = modelViewerAnimated.createVideoTexture("Video.mp4");
     });
     modelViewerAnimated.addEventListener("load", async () => {
     
