@@ -5,19 +5,7 @@
     <meta charset="utf-8">
     <meta name="description" content="Model-Viewer template with video texture">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-
-    <script type="importmap-shim">
-    {
-      "imports": {
-        "three": "https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"
-      }
-    }
-    </script>
-
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.0.1/model-viewer.min.js"></script>
-
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -45,6 +33,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            z-index: 10;
         }
     </style>
 </head>
@@ -69,48 +58,79 @@
         const videoElement = document.getElementById("videoTexture");
         const startButton = document.getElementById("start-button");
 
+        // Initialize video with proper attributes
+        videoElement.muted = true;
+        videoElement.preload = "auto";
+        videoElement.playsInline = true;
+        videoElement.load();
+
         let videoTexture = null;
 
         async function getVideoTexture() {
             if (!videoTexture) {
-                videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
+                try {
+                    // Create video texture
+                    videoTexture = await modelViewerAnimated.createVideoTexture(videoElement);
+                    
+                    // Try to play video
+                    await videoElement.play().catch(e => {
+                        console.log("Initial play attempt failed:", e);
+                        startButton.style.display = "block";
+                    });
+                    
+                    return videoTexture;
+                } catch (error) {
+                    console.error("Video texture creation failed:", error);
+                    startButton.style.display = "block";
+                    return null;
+                }
             }
             return videoTexture;
         }
 
-        modelViewerAnimated.addEventListener("scene-graph-ready", async () => {
+        async function applyVideoTexture() {
             try {
-                const material = modelViewerAnimated.model.materials[0]; // Select the first material
+                const material = modelViewerAnimated.model.materials[0];
                 const { baseColorTexture } = material.pbrMetallicRoughness;
 
                 if (!baseColorTexture) {
-                    console.error("❌ Model does not have a baseColorTexture slot!");
+                    console.error("Model does not have a baseColorTexture slot!");
                     return;
                 }
 
-                // ✅ Fix for autoplay restrictions (User interaction needed on mobile)
-                startButton.addEventListener("click", async () => {
-                    videoElement.muted = false; // Unmute video
-                    await videoElement.play();
-                    baseColorTexture.setTexture(await getVideoTexture());
-                    startButton.style.display = "none"; // Hide button after start
-                });
-
-                // ✅ Try to autoplay on supported devices
-                try {
-                    await videoElement.play();
-                    baseColorTexture.setTexture(await getVideoTexture());
-                    startButton.style.display = "none"; // Hide button if autoplay works
-                } catch (err) {
-                    console.warn("Autoplay failed, user interaction needed.");
+                const texture = await getVideoTexture();
+                if (texture) {
+                    baseColorTexture.setTexture(texture);
+                    startButton.style.display = "none";
                 }
-
             } catch (error) {
                 console.error("Error applying video texture:", error);
+                startButton.style.display = "block";
+            }
+        }
+
+        // When model is ready
+        modelViewerAnimated.addEventListener("load", async () => {
+            // Try to autoplay first
+            try {
+                await applyVideoTexture();
+            } catch (e) {
+                console.log("Initial texture application failed:", e);
+            }
+        });
+
+        // Manual start button
+        startButton.addEventListener("click", async () => {
+            await applyVideoTexture();
+        });
+
+        // Handle AR mode
+        modelViewerAnimated.addEventListener("ar-status", async (event) => {
+            if (event.detail.status === "session-started") {
+                await applyVideoTexture();
             }
         });
 
     </script>
-
 </body>
 </html>
