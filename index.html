@@ -11,12 +11,12 @@
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-  {
-    "imports": {
-      "three": "./model-viewer-301.min.js"
-    }
+{
+  "imports": {
+    "three": "./model-viewer-301.min.js"
   }
-  </script>
+}
+</script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
@@ -35,44 +35,30 @@
       <img src="ar_hand_prompt.png">
     </div>
   </model-viewer>
-  
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
     let videoTexture = null;
 
-    // Wait for the 'model-viewer' element to be defined and the model to be loaded
+
     customElements.whenDefined('model-viewer').then(() => {
-      // Create the video texture after the model-viewer element is ready
       videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
-      
-      // Ensure the video starts playing
-      videoTexture.video.play();
     });
+
+
 
     modelViewerAnimated.addEventListener("load", async () => {
-      // Wait until the model is fully loaded
-      await modelViewerAnimated.updateComplete;
 
-      // Retrieve the 3D model and mesh by name
-      const scene = modelViewerAnimated.model.scene;
-      const meshName = "pPlane1"; // The name of the mesh you want to apply the video texture
-      const mesh = scene.getObjectByName(meshName);
+      const material = modelViewerAnimated.model.materials[0];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+      console.log(modelViewerAnimated.model.materials)
 
-      if (mesh) {
-        // Check if the mesh has the material we want (assuming it has "lambert1" as material name)
-        const material = mesh.material;
-        if (material && material.pbrMetallicRoughness) {
-          const { baseColorTexture } = material.pbrMetallicRoughness;
-          console.log("Found mesh and material", mesh, material);
-          
-          // Apply the video texture to the base color of the material
-          baseColorTexture.setTexture(videoTexture);
-        }
-      }
+
+      baseColorTexture.setTexture(videoTexture);
+
     });
-  </script>
 
+  </script>
   <script src="script.js"></script>
 
 </body>
