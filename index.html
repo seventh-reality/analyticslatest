@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Alpha Video Texture on Material</title>
+  <title>Video Texture with THREE.js</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Use official model-viewer distribution -->
+  <!-- Import model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <!-- Import THREE.js directly -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
   <style>
     model-viewer {
       width: 100%;
@@ -44,10 +46,10 @@
 <body>
   <model-viewer id="modelViewer" src="all.glb" camera-controls shadow-intensity="1">
     <div id="controls">
-      <button id="play-button">Play Alpha Video</button>
+      <button id="play-button">Play Video</button>
       <button id="mute-button">Unmute</button>
     </div>
-    <div id="status">Ready to load alpha video texture</div>
+    <div id="status">Ready to load video texture</div>
   </model-viewer>
 
   <script type="module">
@@ -57,9 +59,9 @@
       const muteButton = document.querySelector('#mute-button');
       const statusDisplay = document.querySelector('#status');
       
-      // Create video element (must be WebM with alpha channel)
+      // Create video element
       const video = document.createElement('video');
-      video.src = './Green.webm'; // Must be WebM with alpha
+      video.src = 'Green.webm'; // Use WebM for alpha transparency
       video.loop = true;
       video.muted = true;
       video.playsInline = true;
@@ -74,9 +76,6 @@
       // Wait for model-viewer to be ready
       await customElements.whenDefined('model-viewer');
       
-      // Get THREE from model-viewer's internal scope
-      const THREE = await getThreeFromModelViewer(modelViewer);
-      
       // Wait for model to load
       await new Promise((resolve) => {
         modelViewer.addEventListener('load', resolve, { once: true });
@@ -85,7 +84,7 @@
       // Play button handler
       playButton.addEventListener('click', async () => {
         try {
-          statusDisplay.textContent = 'Loading alpha video...';
+          statusDisplay.textContent = 'Loading video...';
           
           // Ensure video is ready
           await new Promise((resolve, reject) => {
@@ -97,28 +96,28 @@
           // Start playback
           await video.play();
           
-          // Create video texture
+          // Create video texture using THREE.js
           const videoTexture = new THREE.VideoTexture(video);
           videoTexture.encoding = THREE.sRGBEncoding;
           
-          // Get the first material (material[0])
+          // Get the first material
           const material = modelViewer.model.materials[0];
           if (!material) {
             throw new Error('No materials found in the model');
           }
           
-          // Apply as mask with proper alpha handling
+          // Apply video texture with alpha handling
           if (material.pbrMetallicRoughness) {
             material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-            material.alphaMap = videoTexture; // Use as alpha mask
+            material.alphaMap = videoTexture; // For transparency
           } else {
             material.map = videoTexture;
             material.alphaMap = videoTexture;
           }
           
-          // Configure material for transparency
+          // Configure material properties
           material.transparent = true;
-          material.alphaTest = 0.05; // Lower value for smoother edges
+          material.alphaTest = 0.1;
           material.needsUpdate = true;
           
           // Find all meshes using this material
@@ -129,7 +128,7 @@
             }
           });
           
-          statusDisplay.textContent = `Alpha video playing on ${videoMeshes.length} meshes`;
+          statusDisplay.textContent = `Video playing on ${videoMeshes.length} meshes`;
           playButton.style.display = 'none';
           
         } catch (error) {
@@ -138,18 +137,6 @@
           playButton.textContent = 'Retry Playback';
         }
       });
-
-      // Helper function to get THREE from model-viewer
-      async function getThreeFromModelViewer(modelViewer) {
-        // Wait for renderer to be loaded
-        await new Promise(resolve => {
-          if (modelViewer.renderer) resolve();
-          modelViewer.addEventListener('renderer-load', resolve, { once: true });
-        });
-        
-        // Get THREE from renderer
-        return modelViewer.renderer.three;
-      }
     });
   </script>
 </body>
