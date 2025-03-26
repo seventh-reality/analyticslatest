@@ -11,12 +11,12 @@
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-{
-  "imports": {
-    "three": "./model-viewer-301.min.js"
+  {
+    "imports": {
+      "three": "./model-viewer-301.min.js"
+    }
   }
-}
-</script>
+  </script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
@@ -35,30 +35,49 @@
       <img src="ar_hand_prompt.png">
     </div>
   </model-viewer>
+
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
     let videoTexture = null;
 
-
     customElements.whenDefined('model-viewer').then(() => {
+      // Create the video texture
       videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+      
+      // Flip the video texture if it's reversed (adjust flipX or flipY as needed)
+      videoTexture.flipY = true; // Flip vertically (adjust this line if you need to flip horizontally instead)
+      
+      // Optional: To handle green screen removal, you need a custom shader or video pre-processing.
+      // This code does not handle chroma keying directly.
+
+      // Ensure video starts playing
+      videoTexture.video.play();
     });
-
-
 
     modelViewerAnimated.addEventListener("load", async () => {
+      // Wait for the model to be fully loaded
+      await modelViewerAnimated.updateComplete;
 
-      const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
+      // Retrieve the 3D model and mesh by name
+      const scene = modelViewerAnimated.model.scene;
+      const meshName = "pPlane1"; // The name of the mesh you want to apply the video texture
+      const mesh = scene.getObjectByName(meshName);
 
-
-      baseColorTexture.setTexture(videoTexture);
-
+      if (mesh) {
+        // Check if the mesh has the material we want (assuming it has "lambert1" as material name)
+        const material = mesh.material;
+        if (material && material.pbrMetallicRoughness) {
+          const { baseColorTexture } = material.pbrMetallicRoughness;
+          console.log("Found mesh and material", mesh, material);
+          
+          // Apply the video texture to the base color of the material
+          baseColorTexture.setTexture(videoTexture);
+        }
+      }
     });
-
   </script>
+
   <script src="script.js"></script>
 
 </body>
