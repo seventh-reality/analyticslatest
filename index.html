@@ -41,17 +41,18 @@
 
     // Create a video element for the green screen video
     const videoElement = document.createElement('video');
-    videoElement.src = './Green.webm';  // Make sure to use a video with alpha channel (WebM with VP8/VP9 or MOV)
+    videoElement.src = './Green.webm';  // Ensure this is a WebM video with transparency (alpha channel)
     videoElement.loop = true;
     videoElement.muted = true;
-    videoElement.play();
+    videoElement.autoplay = true;  // Ensure the video starts automatically
+    videoElement.play().catch(err => console.error("Video playback failed", err)); // Handle errors
 
     // Wait for the model-viewer element to be defined
     customElements.whenDefined('model-viewer').then(() => {
       // Create a video texture from the video element
       const videoTexture = new THREE.VideoTexture(videoElement);
 
-      // Make sure to use the correct texture encoding for transparency
+      // Ensure proper encoding for the texture
       videoTexture.encoding = THREE.sRGBEncoding;
       videoTexture.alphaMode = 'blend';  // This handles alpha transparency
 
