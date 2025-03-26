@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Video on 3D Plane</title>
+  <title>Video on pPlane1 Mesh</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
@@ -38,15 +38,6 @@
       border-radius: 5px;
       z-index: 10;
     }
-    #video-debug {
-      position: absolute;
-      bottom: 80px;
-      right: 20px;
-      width: 200px;
-      background: black;
-      border: 2px solid white;
-      z-index: 10;
-    }
   </style>
 </head>
 <body>
@@ -56,10 +47,6 @@
       <button id="mute-button">Unmute</button>
     </div>
     <div id="status">Ready to load video texture on pPlane1</div>
-    <div id="video-debug">
-      <p>Video Source:</p>
-      <video id="video-preview" width="200" muted></video>
-    </div>
   </model-viewer>
 
   <script type="module">
@@ -68,7 +55,6 @@
       const playButton = document.querySelector('#play-button');
       const muteButton = document.querySelector('#mute-button');
       const statusDisplay = document.querySelector('#status');
-      const videoPreview = document.querySelector('#video-preview');
       
       // Create video element
       const video = document.createElement('video');
@@ -77,12 +63,10 @@
       video.muted = true;
       video.playsInline = true;
       video.crossOrigin = 'anonymous';
-      videoPreview.src = 'Video.mp4';
       
       // Mute/unmute control
       muteButton.addEventListener('click', () => {
         video.muted = !video.muted;
-        videoPreview.muted = !videoPreview.muted;
         muteButton.textContent = video.muted ? 'Unmute' : 'Mute';
       });
       
@@ -108,7 +92,6 @@
           
           // Start playback
           await video.play();
-          videoPreview.play();
           
           // Create video texture
           const videoTexture = new THREE.VideoTexture(video);
@@ -123,33 +106,36 @@
           });
           
           if (!targetPlane) {
-            throw new Error('Could not find pPlane1 in the model');
+            throw new Error('Could not find pPlane1 mesh in the model');
           }
           
-          // Apply video texture to pPlane1
-          targetPlane.material = new THREE.MeshBasicMaterial({
+          // Create special material for video playback
+          const videoMaterial = new THREE.MeshBasicMaterial({
             map: videoTexture,
             transparent: true,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            alphaTest: 0.5
           });
           
-          statusDisplay.textContent = 'Video playing on pPlane1!';
-          playButton.style.display = 'none';
+          // Apply material to pPlane1
+          targetPlane.material = videoMaterial;
           
-          // Adjust plane UVs if video appears stretched
+          // Adjust UV mapping if needed (uncomment if video appears stretched)
+          /*
           const geometry = targetPlane.geometry;
           const uvAttribute = geometry.getAttribute('uv');
-          
-          // Modify UVs to match video aspect ratio if needed
-          if (video.videoWidth && video.videoHeight) {
-            const videoAspect = video.videoWidth / video.videoHeight;
-            for (let i = 0; i < uvAttribute.count; i++) {
-              const u = uvAttribute.getX(i);
-              const v = uvAttribute.getY(i);
-              uvAttribute.setXY(i, u * videoAspect, v);
-            }
-            uvAttribute.needsUpdate = true;
+          const videoAspect = video.videoWidth / video.videoHeight;
+          for (let i = 0; i < uvAttribute.count; i++) {
+            uvAttribute.setXY(i, uvAttribute.getX(i) * videoAspect, uvAttribute.getY(i));
           }
+          uvAttribute.needsUpdate = true;
+          */
+          
+          statusDisplay.textContent = 'Video playing on pPlane1 mesh!';
+          playButton.style.display = 'none';
+          
+          // Force update to show changes
+          modelViewer.dispatchEvent(new CustomEvent('load'));
           
         } catch (error) {
           console.error('Error:', error);
