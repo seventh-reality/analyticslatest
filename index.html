@@ -1,112 +1,100 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-  <title>&lt;model-viewer&gt; template</title>
-  <meta charset="utf-8">
-  <meta name="description" content="&lt;model-viewer&gt; template">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link type="text/css" href="./styles.css" rel="stylesheet" />
-
-  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-
-  <script type="importmap-shim">
-  {
-    "imports": {
-      "three": "./model-viewer-301.min.js"
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive 3D Model</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@1.9.2/dist/model-viewer.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f0;
     }
-  }
-  </script>
 
-  <script type="module-shim" src="model-viewer-301.min.js"></script>
+    .container {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    model-viewer {
+      width: 80%;
+      height: 80%;
+      background-color: #000;
+    }
+
+    .controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .controls button {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    .controls button:hover {
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+  </style>
 </head>
-
 <body>
-  <!-- <model-viewer> HTML element -->
-  <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
-    shadow-intensity="1" camera-target="0m 0m 0m">
-    <div class="progress-bar hide" slot="progress-bar">
-      <div class="update-bar"></div>
+
+<div class="container">
+  <model-viewer id="model" src="CT_Room.glb" alt="3D Model" ar ar-modes="webxr scene-viewer quick-look"
+               camera-controls auto-rotate poster="model-poster.jpg">
+    <div slot="ar-button" class="ar-button">
+      <button>View in AR</button>
     </div>
-    <button slot="ar-button" id="ar-button">
-      View in your space
-    </button>
   </model-viewer>
 
-  <script type="module">
-    const modelViewerAnimated = document.querySelector("model-viewer#animated");
-    
-    async function setupVideoTexture() {
-      try {
-        // Create a video element for the green screen video
-        const videoElement = document.createElement('video');
-        videoElement.src = './Green.webm';
-        videoElement.loop = true;
-        videoElement.muted = true;
-        videoElement.playsInline = true;
-        videoElement.crossOrigin = "anonymous";
-        
-        // Wait for the model-viewer element to be defined
-        await customElements.whenDefined('model-viewer');
-        
-        // Wait for the model to load
-        await new Promise((resolve) => {
-          modelViewerAnimated.addEventListener('load', resolve, { once: true });
-        });
+  <!-- Controls for interaction -->
+  <div class="controls">
+    <button onclick="toggleAutoRotate()">Toggle Auto-Rotate</button>
+    <button onclick="zoomIn()">Zoom In</button>
+    <button onclick="zoomOut()">Zoom Out</button>
+  </div>
+</div>
 
-        // Create a button to start the video
-        const playButton = document.createElement('button');
-        playButton.textContent = 'Play Video Texture';
-        playButton.style.position = 'absolute';
-        playButton.style.bottom = '100px';
-        playButton.style.left = '50%';
-        playButton.style.transform = 'translateX(-50%)';
-        playButton.style.zIndex = '1000';
-        playButton.style.padding = '10px 20px';
-        playButton.style.backgroundColor = '#fff';
-        playButton.style.border = 'none';
-        playButton.style.borderRadius = '4px';
-        playButton.style.cursor = 'pointer';
-        document.body.appendChild(playButton);
-        
-        playButton.addEventListener('click', async () => {
-          try {
-            // Start video playback
-            await videoElement.play();
-            console.log("Video playback started");
-            
-            // Create video texture - THREE should be available globally from model-viewer
-            const videoTexture = new THREE.VideoTexture(videoElement);
-            videoTexture.encoding = THREE.sRGBEncoding;
-            
-            // Apply the texture to all materials
-            modelViewerAnimated.model.materials.forEach((material) => {
-              if (material.pbrMetallicRoughness) {
-                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-                material.transparent = true;
-                material.alphaTest = 0.1;
-                material.needsUpdate = true;
-              }
-            });
-            
-            // Remove the button after successful playback
-            playButton.remove();
-          } catch (error) {
-            console.error("Error starting video playback:", error);
-            playButton.textContent = 'Error - Click to Try Again';
-          }
-        });
-        
-      } catch (error) {
-        console.error("Error setting up video texture:", error);
-      }
-    }
-    
-    // Start the setup process
-    setupVideoTexture();
-  </script>
-  
-  <script src="script.js"></script>
+<script>
+  // Select the model-viewer element
+  const modelViewer = document.querySelector('model-viewer');
+
+  // Toggle auto-rotation
+  function toggleAutoRotate() {
+    modelViewer.autoRotate = !modelViewer.autoRotate;
+  }
+
+  // Zoom In
+  function zoomIn() {
+    const currentFov = modelViewer.cameraOrbit.split(' ')[0];
+    const newFov = parseFloat(currentFov) - 10;
+    modelViewer.cameraOrbit = `${newFov}deg ${currentFov.split(' ')[1]} ${currentFov.split(' ')[2]}`;
+  }
+
+  // Zoom Out
+  function zoomOut() {
+    const currentFov = modelViewer.cameraOrbit.split(' ')[0];
+    const newFov = parseFloat(currentFov) + 10;
+    modelViewer.cameraOrbit = `${newFov}deg ${currentFov.split(' ')[1]} ${currentFov.split(' ')[2]}`;
+  }
+</script>
+
 </body>
-
 </html>
