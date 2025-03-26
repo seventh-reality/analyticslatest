@@ -11,12 +11,12 @@
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-{
-  "imports": {
-    "three": "./model-viewer-301.min.js"
+  {
+    "imports": {
+      "three": "./model-viewer-301.min.js"
+    }
   }
-}
-</script>
+  </script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
@@ -35,32 +35,44 @@
       <img src="ar_hand_prompt.png">
     </div>
   </model-viewer>
+
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
-    let videoTexture = null;
+    // Create a video element for the green screen video
+    const videoElement = document.createElement('video');
+    videoElement.src = './Video.webm';  // Make sure to use a video with alpha channel (WebM with VP8/VP9 or MOV)
+    videoElement.loop = true;
+    videoElement.muted = true;
+    videoElement.play();
 
-
+    // Wait for the model-viewer element to be defined
     customElements.whenDefined('model-viewer').then(() => {
-      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+      // Create a video texture from the video element
+      const videoTexture = new THREE.VideoTexture(videoElement);
+
+      // Make sure to use the correct texture encoding for transparency
+      videoTexture.encoding = THREE.sRGBEncoding;
+      videoTexture.alphaMode = 'blend';  // This handles alpha transparency
+
+      // Wait until the model is loaded
+      modelViewerAnimated.addEventListener("load", async () => {
+        const material = modelViewerAnimated.model.materials[0];
+        const { baseColorTexture } = material.pbrMetallicRoughness;
+
+        console.log(modelViewerAnimated.model.materials);
+
+        // Apply the video texture to the model
+        baseColorTexture.setTexture(videoTexture);
+
+        // Ensure material uses alpha blending for transparency
+        material.transparent = true;
+        material.alphaTest = 0.5;  // This may need to be adjusted based on your video (for green screen)
+      });
     });
-
-
-
-    modelViewerAnimated.addEventListener("load", async () => {
-
-      const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
-
-
-      baseColorTexture.setTexture(videoTexture);
-
-    });
-
   </script>
+  
   <script src="script.js"></script>
-
 </body>
 
 </html>
