@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Video on pPlane1 Mesh</title>
+  <title>Video on lambert20 Material</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
@@ -38,15 +38,23 @@
       border-radius: 5px;
       z-index: 10;
     }
+    #highlight {
+      position: absolute;
+      border: 2px solid red;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
+    }
   </style>
 </head>
 <body>
   <model-viewer id="modelViewer" src="all.glb" camera-controls shadow-intensity="1">
     <div id="controls">
-      <button id="play-button">Play Video on pPlane1</button>
+      <button id="play-button">Play Video on lambert20</button>
       <button id="mute-button">Unmute</button>
     </div>
-    <div id="status">Ready to load video texture on pPlane1</div>
+    <div id="status">Ready to load video texture on lambert20 material</div>
+    <div id="highlight"></div>
   </model-viewer>
 
   <script type="module">
@@ -55,6 +63,7 @@
       const playButton = document.querySelector('#play-button');
       const muteButton = document.querySelector('#mute-button');
       const statusDisplay = document.querySelector('#status');
+      const highlight = document.querySelector('#highlight');
       
       // Create video element
       const video = document.createElement('video');
@@ -63,6 +72,10 @@
       video.muted = true;
       video.playsInline = true;
       video.crossOrigin = 'anonymous';
+      
+      // Track which meshes use lambert20
+      let videoMaterial = null;
+      let videoMeshes = [];
       
       // Mute/unmute control
       muteButton.addEventListener('click', () => {
@@ -78,10 +91,41 @@
         modelViewer.addEventListener('load', resolve, { once: true });
       });
       
+      // Highlight meshes with video
+      function highlightVideoMeshes() {
+        if (videoMeshes.length === 0) return;
+        
+        // Create combined bounding box
+        const combinedBox = new THREE.Box3();
+        videoMeshes.forEach(mesh => {
+          const meshBox = new THREE.Box3().setFromObject(mesh);
+          combinedBox.union(meshBox);
+        });
+        
+        const size = combinedBox.getSize(new THREE.Vector3());
+        const center = combinedBox.getCenter(new THREE.Vector3());
+        
+        // Convert to screen coordinates
+        const width = modelViewer.clientWidth;
+        const height = modelViewer.clientHeight;
+        const vector = new THREE.Vector3(center.x, center.y, center.z);
+        vector.project(modelViewer.camera);
+        
+        const x = (vector.x * 0.5 + 0.5) * width;
+        const y = -(vector.y * 0.5 - 0.5) * height;
+        
+        // Position highlight div
+        highlight.style.display = 'block';
+        highlight.style.left = `${x - size.x/2}px`;
+        highlight.style.top = `${y - size.y/2}px`;
+        highlight.style.width = `${size.x}px`;
+        highlight.style.height = `${size.y}px`;
+      }
+      
       // Play button handler
       playButton.addEventListener('click', async () => {
         try {
-          statusDisplay.textContent = 'Loading video for pPlane1...';
+          statusDisplay.textContent = 'Loading video for lambert20 material...';
           
           // Ensure video is ready
           await new Promise((resolve, reject) => {
@@ -97,45 +141,43 @@
           const videoTexture = new THREE.VideoTexture(video);
           videoTexture.encoding = THREE.sRGBEncoding;
           
-          // Find pPlane1 in the model
-          let targetPlane = null;
+          // Find lambert20 material in the model
+          videoMaterial = modelViewer.model.materials.find(
+            material => material.name === 'lambert20'
+          );
+          
+          if (!videoMaterial) {
+            throw new Error('Could not find lambert20 material in the model');
+          }
+          
+          // Apply video texture to lambert20 material
+          if (videoMaterial.pbrMetallicRoughness) {
+            videoMaterial.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+          } else {
+            videoMaterial.map = videoTexture;
+          }
+          
+          videoMaterial.transparent = true;
+          videoMaterial.alphaTest = 0.1;
+          videoMaterial.needsUpdate = true;
+          
+          // Find all meshes using this material
           modelViewer.model.scene.traverse((child) => {
-            if (child.isMesh && child.name === 'pPlane1') {
-              targetPlane = child;
+            if (child.isMesh && child.material === videoMaterial) {
+              videoMeshes.push(child);
             }
           });
           
-          if (!targetPlane) {
-            throw new Error('Could not find pPlane1 mesh in the model');
+          if (videoMeshes.length === 0) {
+            statusDisplay.textContent = 'No meshes found using lambert20 material';
+          } else {
+            statusDisplay.textContent = `Video playing on ${videoMeshes.length} meshes with lambert20 material`;
+            playButton.style.display = 'none';
+            highlightVideoMeshes();
+            
+            // Update highlight when camera moves
+            modelViewer.addEventListener('camera-change', highlightVideoMeshes);
           }
-          
-          // Create special material for video playback
-          const videoMaterial = new THREE.MeshBasicMaterial({
-            map: videoTexture,
-            transparent: true,
-            side: THREE.DoubleSide,
-            alphaTest: 0.5
-          });
-          
-          // Apply material to pPlane1
-          targetPlane.material = videoMaterial;
-          
-          // Adjust UV mapping if needed (uncomment if video appears stretched)
-          /*
-          const geometry = targetPlane.geometry;
-          const uvAttribute = geometry.getAttribute('uv');
-          const videoAspect = video.videoWidth / video.videoHeight;
-          for (let i = 0; i < uvAttribute.count; i++) {
-            uvAttribute.setXY(i, uvAttribute.getX(i) * videoAspect, uvAttribute.getY(i));
-          }
-          uvAttribute.needsUpdate = true;
-          */
-          
-          statusDisplay.textContent = 'Video playing on pPlane1 mesh!';
-          playButton.style.display = 'none';
-          
-          // Force update to show changes
-          modelViewer.dispatchEvent(new CustomEvent('load'));
           
         } catch (error) {
           console.error('Error:', error);
