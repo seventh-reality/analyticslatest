@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Model Viewer with Video Texture</title>
+  <title>Video Texture with Visual Indicator</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
@@ -10,6 +10,7 @@
       width: 100%;
       height: 100vh;
       background-color: #f0f0f0;
+      position: relative;
     }
     #controls {
       position: absolute;
@@ -28,9 +29,32 @@
       cursor: pointer;
     }
     #status {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
       color: white;
-      text-align: center;
-      padding: 10px;
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    #video-display {
+      position: absolute;
+      bottom: 80px;
+      right: 20px;
+      width: 200px;
+      background: black;
+      border: 2px solid white;
+      z-index: 10;
+      display: none;
+    }
+    #highlight {
+      position: absolute;
+      border: 2px solid red;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
     }
   </style>
 </head>
@@ -39,8 +63,14 @@
     <div id="controls">
       <button id="play-button">Play Video</button>
       <button id="mute-button">Unmute</button>
+      <button id="show-video">Show Video Source</button>
     </div>
-    <div id="status"></div>
+    <div id="status">Ready to load video texture</div>
+    <div id="video-display">
+      <p>Video Texture Preview:</p>
+      <video id="video-preview" width="200" controls></video>
+    </div>
+    <div id="highlight"></div>
   </model-viewer>
 
   <script type="module">
@@ -48,18 +78,24 @@
       const modelViewer = document.querySelector('#modelViewer');
       const playButton = document.querySelector('#play-button');
       const muteButton = document.querySelector('#mute-button');
+      const showVideoBtn = document.querySelector('#show-video');
       const statusDisplay = document.querySelector('#status');
+      const videoDisplay = document.querySelector('#video-display');
+      const videoPreview = document.querySelector('#video-preview');
+      const highlight = document.querySelector('#highlight');
       
       // Create video element
       const video = document.createElement('video');
-      video.src = 'Video.mp4'; // Make sure this path is correct
+      video.src = 'Video.mp4';
       video.loop = true;
-      video.muted = true; // Start muted to allow autoplay
+      video.muted = true;
       video.playsInline = true;
       video.crossOrigin = 'anonymous';
+      videoPreview.src = 'Video.mp4';
       
-      // Preload the video
-      video.preload = 'auto';
+      // Track which part of model has video
+      let videoMaterial = null;
+      let videoMesh = null;
       
       // Wait for model-viewer to be ready
       await customElements.whenDefined('model-viewer');
@@ -72,73 +108,91 @@
       // Mute/unmute control
       muteButton.addEventListener('click', () => {
         video.muted = !video.muted;
+        videoPreview.muted = !videoPreview.muted;
         muteButton.textContent = video.muted ? 'Unmute' : 'Mute';
       });
+      
+      // Show/hide video preview
+      showVideoBtn.addEventListener('click', () => {
+        videoDisplay.style.display = videoDisplay.style.display === 'none' ? 'block' : 'none';
+        if (videoDisplay.style.display === 'block') {
+          videoPreview.play();
+        } else {
+          videoPreview.pause();
+        }
+      });
+      
+      // Highlight mesh with video
+      function highlightVideoMesh() {
+        if (!videoMesh) return;
+        
+        // Get mesh position and size
+        const meshBox = new THREE.Box3().setFromObject(videoMesh);
+        const size = meshBox.getSize(new THREE.Vector3());
+        const center = meshBox.getCenter(new THREE.Vector3());
+        
+        // Convert to screen coordinates
+        const width = modelViewer.clientWidth;
+        const height = modelViewer.clientHeight;
+        const vector = new THREE.Vector3(center.x, center.y, center.z);
+        vector.project(modelViewer.camera);
+        
+        const x = (vector.x * 0.5 + 0.5) * width;
+        const y = -(vector.y * 0.5 - 0.5) * height;
+        
+        // Position highlight div
+        highlight.style.display = 'block';
+        highlight.style.left = `${x - size.x/2}px`;
+        highlight.style.top = `${y - size.y/2}px`;
+        highlight.style.width = `${size.x}px`;
+        highlight.style.height = `${size.y}px`;
+      }
       
       // Play button handler
       playButton.addEventListener('click', async () => {
         try {
           statusDisplay.textContent = 'Loading video...';
           
-          // First ensure video is loaded enough to play
           await new Promise((resolve, reject) => {
             video.addEventListener('canplaythrough', resolve, { once: true });
             video.addEventListener('error', reject, { once: true });
-            video.load(); // Explicitly load the video
+            video.load();
           });
           
-          // Then attempt to play
           await video.play();
           
-          statusDisplay.textContent = 'Video playing!';
+          statusDisplay.textContent = 'Video playing on 3D model!';
           playButton.style.display = 'none';
           
           // Create video texture
           const videoTexture = new THREE.VideoTexture(video);
           videoTexture.encoding = THREE.sRGBEncoding;
           
-          // Chroma key shader for green screen removal
-          const chromaKeyMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-              tex: { value: videoTexture },
-              color: { value: new THREE.Color(0x00ff00) }, // Green to remove
-              threshold: { value: 0.4 },
-              slope: { value: 0.1 }
-            },
-            vertexShader: `
-              varying vec2 vUv;
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-              }
-            `,
-            fragmentShader: `
-              uniform sampler2D tex;
-              uniform vec3 color;
-              uniform float threshold;
-              uniform float slope;
-              varying vec2 vUv;
-              
-              void main() {
-                vec4 tColor = texture2D(tex, vUv);
-                float d = distance(tColor.rgb, color);
-                float edge0 = threshold * (1.0 - slope);
-                float alpha = 1.0 - smoothstep(edge0, threshold, d);
-                gl_FragColor = vec4(tColor.rgb, alpha);
-              }
-            `,
-            transparent: true
-          });
-          
-          // Apply to all materials in the model
-          modelViewer.model.materials.forEach((material) => {
-            if (material.pbrMetallicRoughness) {
+          // Find the first mesh that can receive textures
+          modelViewer.model.materials.forEach((material, index) => {
+            if (material.pbrMetallicRoughness && !videoMaterial) {
+              videoMaterial = material;
               material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
               material.transparent = true;
               material.alphaTest = 0.1;
               material.needsUpdate = true;
+              
+              // Find the mesh using this material
+              modelViewer.model.scene.traverse((child) => {
+                if (child.isMesh && child.material === material && !videoMesh) {
+                  videoMesh = child;
+                  highlightVideoMesh();
+                  
+                  // Update highlight when camera moves
+                  modelViewer.addEventListener('camera-change', highlightVideoMesh);
+                }
+              });
             }
           });
+          
+          if (!videoMaterial) {
+            statusDisplay.textContent = 'No suitable material found for video texture';
+          }
           
         } catch (error) {
           console.error('Video playback failed:', error);
@@ -146,9 +200,6 @@
           playButton.textContent = 'Retry Playback';
         }
       });
-      
-      // Show instructions
-      statusDisplay.textContent = 'Click "Play Video" to start';
     });
   </script>
 </body>
