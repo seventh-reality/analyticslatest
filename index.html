@@ -11,12 +11,12 @@
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-{
-  "imports": {
-    "three": "./model-viewer-301.min.js"
+  {
+    "imports": {
+      "three": "./model-viewer-301.min.js"
+    }
   }
-}
-</script>
+  </script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
@@ -24,43 +24,128 @@
 <body>
   <!-- <model-viewer> HTML element -->
   <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
-    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+    shadow-intensity="1" camera-target="0m 0m 0m">
     <div class="progress-bar hide" slot="progress-bar">
       <div class="update-bar"></div>
     </div>
     <button slot="ar-button" id="ar-button">
       View in your space
     </button>
-    <div id="ar-prompt">
-      <img src="ar_hand_prompt.png">
-    </div>
   </model-viewer>
+
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
+    
+    async function setupVideoTexture() {
+      try {
+        // Create a video element for the green screen video
+        const videoElement = document.createElement('video');
+        videoElement.src = './Video.mp4';
+        videoElement.loop = true;
+        videoElement.muted = true;
+        videoElement.playsInline = true;
+        videoElement.crossOrigin = "anonymous";
+        
+        // Wait for the model-viewer element to be defined
+        await customElements.whenDefined('model-viewer');
+        
+        // Wait for the model to load
+        await new Promise((resolve) => {
+          modelViewerAnimated.addEventListener('load', resolve, { once: true });
+        });
 
-    let videoTexture = null;
-
-
-    customElements.whenDefined('model-viewer').then(() => {
-      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
-    });
-
-
-
-    modelViewerAnimated.addEventListener("load", async () => {
-
-      const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
-
-
-      baseColorTexture.setTexture(videoTexture);
-
-    });
-
+        // Create a button to start the video
+        const playButton = document.createElement('button');
+        playButton.textContent = 'Play Video Texture';
+        playButton.style.position = 'absolute';
+        playButton.style.bottom = '100px';
+        playButton.style.left = '50%';
+        playButton.style.transform = 'translateX(-50%)';
+        playButton.style.zIndex = '1000';
+        playButton.style.padding = '10px 20px';
+        playButton.style.backgroundColor = '#fff';
+        playButton.style.border = 'none';
+        playButton.style.borderRadius = '4px';
+        playButton.style.cursor = 'pointer';
+        document.body.appendChild(playButton);
+        
+        playButton.addEventListener('click', async () => {
+          try {
+            // Start video playback
+            await videoElement.play();
+            console.log("Video playback started");
+            
+            // Create video texture
+            const videoTexture = new THREE.VideoTexture(videoElement);
+            videoTexture.encoding = THREE.sRGBEncoding;
+            
+            // Create a custom material with chroma key shader
+            const chromaKeyMaterial = new THREE.ShaderMaterial({
+              uniforms: {
+                texture: { value: videoTexture },
+                colorToReplace: { value: new THREE.Color(0x00ff00) }, // Green
+                threshold: { value: 0.4 },
+                smoothing: { value: 0.1 }
+              },
+              vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                  vUv = uv;
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+              `,
+              fragmentShader: `
+                uniform sampler2D texture;
+                uniform vec3 colorToReplace;
+                uniform float threshold;
+                uniform float smoothing;
+                varying vec2 vUv;
+                
+                void main() {
+                  vec4 textureColor = texture2D(texture, vUv);
+                  float maskY = 0.2989 * colorToReplace.r + 0.5866 * colorToReplace.g + 0.1145 * colorToReplace.b;
+                  float maskCr = 0.7132 * (colorToReplace.r - maskY);
+                  float maskCb = 0.5647 * (colorToReplace.b - maskY);
+                  
+                  float Y = 0.2989 * textureColor.r + 0.5866 * textureColor.g + 0.1145 * textureColor.b;
+                  float Cr = 0.7132 * (textureColor.r - Y);
+                  float Cb = 0.5647 * (textureColor.b - Y);
+                  
+                  float blendValue = smoothstep(threshold, threshold + smoothing, distance(vec2(Cr, Cb), vec2(maskCr, maskCb)));
+                  gl_FragColor = vec4(textureColor.rgb, blendValue);
+                }
+              `,
+              transparent: true
+            });
+            
+            // Apply the material to all meshes in the model
+            modelViewerAnimated.model.materials.forEach((material) => {
+              if (material.pbrMetallicRoughness) {
+                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+                material.transparent = true;
+                material.alphaTest = 0.1;
+                material.needsUpdate = true;
+              }
+            });
+            
+            // Remove the button after successful playback
+            playButton.remove();
+          } catch (error) {
+            console.error("Error starting video playback:", error);
+            playButton.textContent = 'Error - Click to Try Again';
+          }
+        });
+        
+      } catch (error) {
+        console.error("Error setting up video texture:", error);
+      }
+    }
+    
+    // Start the setup process
+    setupVideoTexture();
   </script>
+  
   <script src="script.js"></script>
-
 </body>
 
 </html>
