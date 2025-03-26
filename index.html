@@ -28,8 +28,19 @@
   const modelViewer = document.querySelector("#scene");
 
   modelViewer.addEventListener("load", async () => {
-    const model2 = await modelViewer.createObject("CT_Room.glb"); // Corrected method
-    modelViewer.model.appendChild(model2); // Appends second model to scene
+    console.log("First model loaded!");
+
+    // Load second model separately and merge
+    const model2 = document.createElement("model-viewer");
+    model2.src = "CT_Room.glb";
+    model2.camera-controls = true;
+    model2.shadow-intensity = "1";
+
+    document.body.appendChild(model2);
+
+    model2.addEventListener("load", () => {
+      console.log("Second model loaded!");
+    });
   });
 </script>
 
