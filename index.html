@@ -24,22 +24,19 @@
 <body>
   <!-- <model-viewer> HTML element -->
   <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
-    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+    shadow-intensity="1" camera-target="0m 0m 0m">
     <div class="progress-bar hide" slot="progress-bar">
       <div class="update-bar"></div>
     </div>
     <button slot="ar-button" id="ar-button">
       View in your space
     </button>
-    <div id="ar-prompt">
-      <img src="ar_hand_prompt.png">
-    </div>
+    <!-- Removed missing ar_hand_prompt.png reference -->
   </model-viewer>
 
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
     
-    // Function to handle video playback with user interaction
     async function setupVideoTexture() {
       try {
         // Create a video element for the green screen video
@@ -47,8 +44,8 @@
         videoElement.src = './Green.webm';
         videoElement.loop = true;
         videoElement.muted = true;
-        videoElement.playsInline = true; // Important for mobile devices
-        videoElement.crossOrigin = "anonymous"; // Important if loading from different domain
+        videoElement.playsInline = true;
+        videoElement.crossOrigin = "anonymous";
         
         // Wait for the model-viewer element to be defined
         await customElements.whenDefined('model-viewer');
@@ -58,7 +55,7 @@
           modelViewerAnimated.addEventListener('load', resolve, { once: true });
         });
         
-        // Create a button to start the video (required for autoplay policies)
+        // Create a button to start the video
         const playButton = document.createElement('button');
         playButton.textContent = 'Play Video Texture';
         playButton.style.position = 'absolute';
@@ -75,17 +72,21 @@
         
         playButton.addEventListener('click', async () => {
           try {
-            // Start video playback (requires user interaction)
+            // Start video playback
             await videoElement.play();
             console.log("Video playback started");
             
-            // Create a video texture from the video element
-            const modelViewerThree = await modelViewerAnimated.getRenderer();
-            const { three } = modelViewerThree;
-            const videoTexture = new three.VideoTexture(videoElement);
-            videoTexture.encoding = three.sRGBEncoding;
+            // Get the Three.js scene from model-viewer
+            const scene = modelViewerAnimated.querySelector('canvas').__threeScene;
+            if (!scene) {
+              throw new Error("Three.js scene not found");
+            }
             
-            // Apply the texture to all materials that can accept it
+            // Create video texture
+            const videoTexture = new THREE.VideoTexture(videoElement);
+            videoTexture.encoding = THREE.sRGBEncoding;
+            
+            // Apply the texture to all materials
             modelViewerAnimated.model.materials.forEach((material) => {
               if (material.pbrMetallicRoughness) {
                 material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
