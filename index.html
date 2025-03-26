@@ -4,6 +4,7 @@
   <title>Alpha Video Texture on Material</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Use official model-viewer distribution -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     model-viewer {
@@ -73,6 +74,9 @@
       // Wait for model-viewer to be ready
       await customElements.whenDefined('model-viewer');
       
+      // Get THREE from model-viewer's internal scope
+      const THREE = await getThreeFromModelViewer(modelViewer);
+      
       // Wait for model to load
       await new Promise((resolve) => {
         modelViewer.addEventListener('load', resolve, { once: true });
@@ -134,6 +138,18 @@
           playButton.textContent = 'Retry Playback';
         }
       });
+
+      // Helper function to get THREE from model-viewer
+      async function getThreeFromModelViewer(modelViewer) {
+        // Wait for renderer to be loaded
+        await new Promise(resolve => {
+          if (modelViewer.renderer) resolve();
+          modelViewer.addEventListener('renderer-load', resolve, { once: true });
+        });
+        
+        // Get THREE from renderer
+        return modelViewer.renderer.three;
+      }
     });
   </script>
 </body>
