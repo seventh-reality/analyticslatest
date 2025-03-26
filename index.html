@@ -40,22 +40,22 @@
 
     let videoTexture = null;
 
-
     customElements.whenDefined('model-viewer').then(() => {
       videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
     });
 
-
-
     modelViewerAnimated.addEventListener("load", async () => {
 
       const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
+      const { baseColorTexture } = material.pbrMetallicRoughness;
+      console.log(modelViewerAnimated.model.materials);
 
+      // Flip the texture vertically
+      const textureMatrix = baseColorTexture.matrix;
+      textureMatrix.scale(1, -1); // This will flip the texture vertically along the Y-axis
 
+      // Set the flipped texture
       baseColorTexture.setTexture(videoTexture);
-
     });
 
   </script>
