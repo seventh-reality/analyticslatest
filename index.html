@@ -23,18 +23,18 @@
 
 <body>
   <!-- <model-viewer> HTML element -->
-  <model-viewer id="animated" src="pl.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
-    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
-    <div class="progress-bar hide" slot="progress-bar">
-      <div class="update-bar"></div>
-    </div>
-    <button slot="ar-button" id="ar-button">
-      View in your space
-    </button>
-    <div id="ar-prompt">
-      <img src="ar_hand_prompt.png">
-    </div>
-  </model-viewer>
+ <model-viewer id="scene" src="CT_Room.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls 
+  poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+</model-viewer>
+
+<script type="module">
+  const modelViewer = document.querySelector("#scene");
+
+  modelViewer.addEventListener("load", async () => {
+    const model2 = await modelViewer.createModel("model2.glb");
+    modelViewer.model.addChild(model2);
+  });
+</script>
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
