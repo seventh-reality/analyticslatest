@@ -1,8 +1,7 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-  <title>Model Viewer with Green Screen Video</title>
+  <title>Model Viewer with Video Texture</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
@@ -12,38 +11,55 @@
       height: 100vh;
       background-color: #f0f0f0;
     }
-    #play-button {
+    #controls {
       position: absolute;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 10px;
+    }
+    button {
       padding: 10px 20px;
       background: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      z-index: 10;
+    }
+    #status {
+      color: white;
+      text-align: center;
+      padding: 10px;
     }
   </style>
 </head>
-
 <body>
   <model-viewer id="modelViewer" src="all.glb" camera-controls shadow-intensity="1">
-    <button id="play-button">Play Video</button>
+    <div id="controls">
+      <button id="play-button">Play Video</button>
+      <button id="mute-button">Unmute</button>
+    </div>
+    <div id="status"></div>
   </model-viewer>
 
   <script type="module">
     document.addEventListener('DOMContentLoaded', async () => {
       const modelViewer = document.querySelector('#modelViewer');
       const playButton = document.querySelector('#play-button');
+      const muteButton = document.querySelector('#mute-button');
+      const statusDisplay = document.querySelector('#status');
       
       // Create video element
       const video = document.createElement('video');
-      video.src = 'Video.mp4';
+      video.src = 'Video.mp4'; // Make sure this path is correct
       video.loop = true;
-      video.muted = true;
+      video.muted = true; // Start muted to allow autoplay
       video.playsInline = true;
       video.crossOrigin = 'anonymous';
+      
+      // Preload the video
+      video.preload = 'auto';
       
       // Wait for model-viewer to be ready
       await customElements.whenDefined('model-viewer');
@@ -53,18 +69,35 @@
         modelViewer.addEventListener('load', resolve, { once: true });
       });
       
-      // When play button is clicked
+      // Mute/unmute control
+      muteButton.addEventListener('click', () => {
+        video.muted = !video.muted;
+        muteButton.textContent = video.muted ? 'Unmute' : 'Mute';
+      });
+      
+      // Play button handler
       playButton.addEventListener('click', async () => {
         try {
-          // Start video playback
+          statusDisplay.textContent = 'Loading video...';
+          
+          // First ensure video is loaded enough to play
+          await new Promise((resolve, reject) => {
+            video.addEventListener('canplaythrough', resolve, { once: true });
+            video.addEventListener('error', reject, { once: true });
+            video.load(); // Explicitly load the video
+          });
+          
+          // Then attempt to play
           await video.play();
+          
+          statusDisplay.textContent = 'Video playing!';
           playButton.style.display = 'none';
           
           // Create video texture
           const videoTexture = new THREE.VideoTexture(video);
           videoTexture.encoding = THREE.sRGBEncoding;
           
-          // Create chroma key material
+          // Chroma key shader for green screen removal
           const chromaKeyMaterial = new THREE.ShaderMaterial({
             uniforms: {
               tex: { value: videoTexture },
@@ -109,9 +142,13 @@
           
         } catch (error) {
           console.error('Video playback failed:', error);
-          playButton.textContent = 'Playback Failed - Click to Retry';
+          statusDisplay.textContent = 'Error: ' + error.message;
+          playButton.textContent = 'Retry Playback';
         }
       });
+      
+      // Show instructions
+      statusDisplay.textContent = 'Click "Play Video" to start';
     });
   </script>
 </body>
