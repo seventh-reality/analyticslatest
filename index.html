@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Model Viewer Template</title>
+  <title>Model Viewer with Multiple Models</title>
   <meta charset="utf-8">
   <meta name="description" content="Model Viewer Template">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,36 +30,22 @@
   modelViewer.addEventListener("load", async () => {
     console.log("First model loaded!");
 
-    // Load second model separately and merge
-    const model2 = document.createElement("model-viewer");
-    model2.src = "CT_Room.glb";
-    model2.camera-controls = true;
-    model2.shadow-intensity = "1";
+    // Ensure the scene is loaded before adding a second model
+    const scene = modelViewer.scene;
+    if (!scene) {
+      console.error("Scene not found in model-viewer.");
+      return;
+    }
 
-    document.body.appendChild(model2);
-
-    model2.addEventListener("load", () => {
-      console.log("Second model loaded!");
-    });
-  });
-</script>
-
-<!-- Video Texture Application -->
-<script type="module">
-  const modelViewerAnimated = document.querySelector("#scene");
-
-  let videoTexture = null;
-
-  customElements.whenDefined('model-viewer').then(() => {
-    videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
-  });
-
-  modelViewerAnimated.addEventListener("load", async () => {
-    const material = modelViewerAnimated.model.materials[0];
-    const { baseColorTexture } = material.pbrMetallicRoughness;
-
-    console.log(modelViewerAnimated.model.materials);
-    baseColorTexture.setTexture(videoTexture);
+    // Load the second model and attach it to the first model's scene
+    const model2 = await modelViewer.model.load("CT_Room.glb");
+    
+    if (model2) {
+      scene.add(model2);
+      console.log("Second model loaded and added to scene!");
+    } else {
+      console.error("Failed to load second model.");
+    }
   });
 </script>
 
