@@ -11,12 +11,12 @@
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-{
-  "imports": {
-    "three": "./model-viewer-301.min.js"
+  {
+    "imports": {
+      "three": "./model-viewer-301.min.js"
+    }
   }
-}
-</script>
+  </script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
@@ -35,29 +35,33 @@
       <img src="ar_hand_prompt.png">
     </div>
   </model-viewer>
+
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
     let videoTexture = null;
 
-
+    // Ensure the custom element is fully defined before working with it
     customElements.whenDefined('model-viewer').then(() => {
+      // Create the video texture for the green screen video (Video.mp4)
       videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+
+      // Set the video texture's alpha mode to blend to handle transparency (for green screen)
+      videoTexture.encoding = THREE.sRGBEncoding;  // Ensure correct color encoding
+      videoTexture.alphaMode = 'blend'; // Enable alpha blending
+
+      // Load the model and apply the texture
+      modelViewerAnimated.addEventListener("load", async () => {
+
+        const material = modelViewerAnimated.model.materials[0];
+        const { baseColorTexture } = material.pbrMetallicRoughness;
+
+        console.log(modelViewerAnimated.model.materials);
+
+        // Apply the video texture
+        baseColorTexture.setTexture(videoTexture);
+      });
     });
-
-
-
-    modelViewerAnimated.addEventListener("load", async () => {
-
-      const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
-
-
-      baseColorTexture.setTexture(videoTexture);
-
-    });
-
   </script>
   <script src="script.js"></script>
 
