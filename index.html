@@ -41,27 +41,32 @@
 
     let videoTexture = null;
 
+    // Wait for the 'model-viewer' element to be defined and the model to be loaded
     customElements.whenDefined('model-viewer').then(() => {
+      // Create the video texture after the model-viewer element is ready
       videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+      
+      // Ensure the video starts playing
+      videoTexture.video.play();
     });
 
     modelViewerAnimated.addEventListener("load", async () => {
-      // Ensure the model is fully loaded
+      // Wait until the model is fully loaded
       await modelViewerAnimated.updateComplete;
-      
-      // Retrieve all meshes and materials from the model
+
+      // Retrieve the 3D model and mesh by name
       const scene = modelViewerAnimated.model.scene;
-      const meshName = "pPlane1"; // The name of the mesh where you want to apply the video texture
+      const meshName = "pPlane1"; // The name of the mesh you want to apply the video texture
       const mesh = scene.getObjectByName(meshName);
 
       if (mesh) {
-        // Get the material of the mesh, assuming it has the name "lambert1"
+        // Check if the mesh has the material we want (assuming it has "lambert1" as material name)
         const material = mesh.material;
         if (material && material.pbrMetallicRoughness) {
           const { baseColorTexture } = material.pbrMetallicRoughness;
           console.log("Found mesh and material", mesh, material);
           
-          // Apply the video texture to the base color
+          // Apply the video texture to the base color of the material
           baseColorTexture.setTexture(videoTexture);
         }
       }
