@@ -38,54 +38,78 @@
 
   <script type="module">
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
-
-    // Create a video element for the green screen video
-    const videoElement = document.createElement('video');
-    videoElement.src = './Green.webm';  // Ensure this is a WebM video with transparency (alpha channel)
-    videoElement.loop = true;
-    videoElement.muted = true;
-    videoElement.autoplay = true;  // Ensure the video starts automatically
-
-    // Attempt to play the video and handle errors
-    videoElement.play().then(() => {
-      console.log("Video is playing.");
-    }).catch((error) => {
-      console.error("Video playback failed:", error);
-    });
-
-    // Wait for the model-viewer element to be defined
-    customElements.whenDefined('model-viewer').then(() => {
-      // Create a video texture from the video element
-      const videoTexture = new THREE.VideoTexture(videoElement);
-
-      // Ensure proper encoding for the texture
-      videoTexture.encoding = THREE.sRGBEncoding;
-      videoTexture.alphaMode = 'blend';  // This handles alpha transparency
-
-      // Wait until the model is loaded
-      modelViewerAnimated.addEventListener("load", async () => {
-        const material = modelViewerAnimated.model.materials[0];
-        const { baseColorTexture } = material.pbrMetallicRoughness;
-
-        console.log(modelViewerAnimated.model.materials);
-
-        // Apply the video texture to the model
-        baseColorTexture.setTexture(videoTexture);
-
-        // Ensure material uses alpha blending for transparency
-        material.transparent = true;
-        material.alphaTest = 0.5;  // This may need to be adjusted based on your video (for green screen)
-      });
-    });
-
-    // Check if the video element is loaded properly
-    videoElement.oncanplay = () => {
-      console.log("Video is ready to play.");
-    };
-
-    videoElement.onerror = (e) => {
-      console.error("Error loading video:", e);
-    };
+    
+    // Function to handle video playback with user interaction
+    async function setupVideoTexture() {
+      try {
+        // Create a video element for the green screen video
+        const videoElement = document.createElement('video');
+        videoElement.src = './Green.webm';
+        videoElement.loop = true;
+        videoElement.muted = true;
+        videoElement.playsInline = true; // Important for mobile devices
+        videoElement.crossOrigin = "anonymous"; // Important if loading from different domain
+        
+        // Wait for the model-viewer element to be defined
+        await customElements.whenDefined('model-viewer');
+        
+        // Wait for the model to load
+        await new Promise((resolve) => {
+          modelViewerAnimated.addEventListener('load', resolve, { once: true });
+        });
+        
+        // Create a button to start the video (required for autoplay policies)
+        const playButton = document.createElement('button');
+        playButton.textContent = 'Play Video Texture';
+        playButton.style.position = 'absolute';
+        playButton.style.bottom = '100px';
+        playButton.style.left = '50%';
+        playButton.style.transform = 'translateX(-50%)';
+        playButton.style.zIndex = '1000';
+        playButton.style.padding = '10px 20px';
+        playButton.style.backgroundColor = '#fff';
+        playButton.style.border = 'none';
+        playButton.style.borderRadius = '4px';
+        playButton.style.cursor = 'pointer';
+        document.body.appendChild(playButton);
+        
+        playButton.addEventListener('click', async () => {
+          try {
+            // Start video playback (requires user interaction)
+            await videoElement.play();
+            console.log("Video playback started");
+            
+            // Create a video texture from the video element
+            const modelViewerThree = await modelViewerAnimated.getRenderer();
+            const { three } = modelViewerThree;
+            const videoTexture = new three.VideoTexture(videoElement);
+            videoTexture.encoding = three.sRGBEncoding;
+            
+            // Apply the texture to all materials that can accept it
+            modelViewerAnimated.model.materials.forEach((material) => {
+              if (material.pbrMetallicRoughness) {
+                material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+                material.transparent = true;
+                material.alphaTest = 0.1;
+                material.needsUpdate = true;
+              }
+            });
+            
+            // Remove the button after successful playback
+            playButton.remove();
+          } catch (error) {
+            console.error("Error starting video playback:", error);
+            playButton.textContent = 'Error - Click to Try Again';
+          }
+        });
+        
+      } catch (error) {
+        console.error("Error setting up video texture:", error);
+      }
+    }
+    
+    // Start the setup process
+    setupVideoTexture();
   </script>
   
   <script src="script.js"></script>
