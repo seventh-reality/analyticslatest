@@ -1,13 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Video Texture with THREE.js</title>
+  <title>Working Video Texture Solution</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Import model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <!-- Import THREE.js directly -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
   <style>
     model-viewer {
       width: 100%;
@@ -61,7 +58,7 @@
       
       // Create video element
       const video = document.createElement('video');
-      video.src = 'Green.webm'; // Use WebM for alpha transparency
+      video.src = 'Video.mp4'; // Can also use Green.webm for alpha
       video.loop = true;
       video.muted = true;
       video.playsInline = true;
@@ -75,6 +72,21 @@
       
       // Wait for model-viewer to be ready
       await customElements.whenDefined('model-viewer');
+      
+      // Get Three.js from model-viewer's renderer
+      const getThree = () => {
+        return new Promise(resolve => {
+          if (modelViewer.renderer && modelViewer.renderer.three) {
+            resolve(modelViewer.renderer.three);
+          } else {
+            modelViewer.addEventListener('renderer-load', () => {
+              resolve(modelViewer.renderer.three);
+            }, { once: true });
+          }
+        });
+      };
+      
+      const THREE = await getThree();
       
       // Wait for model to load
       await new Promise((resolve) => {
@@ -96,9 +108,11 @@
           // Start playback
           await video.play();
           
-          // Create video texture using THREE.js
-          const videoTexture = new THREE.VideoTexture(video);
-          videoTexture.encoding = THREE.sRGBEncoding;
+          // Create video texture using model-viewer's API
+          const videoTexture = modelViewer.createTexture('video', {
+            source: video,
+            colorSpace: 'srgb'
+          });
           
           // Get the first material
           const material = modelViewer.model.materials[0];
@@ -106,29 +120,21 @@
             throw new Error('No materials found in the model');
           }
           
-          // Apply video texture with alpha handling
+          // Apply texture using model-viewer's proper method
           if (material.pbrMetallicRoughness) {
-            material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-            material.alphaMap = videoTexture; // For transparency
+            material.pbrMetallicRoughness.baseColorTexture.texture = videoTexture;
           } else {
             material.map = videoTexture;
-            material.alphaMap = videoTexture;
           }
           
           // Configure material properties
           material.transparent = true;
-          material.alphaTest = 0.1;
           material.needsUpdate = true;
           
-          // Find all meshes using this material
-          const videoMeshes = [];
-          modelViewer.model.scene.traverse((child) => {
-            if (child.isMesh && child.material === material) {
-              videoMeshes.push(child);
-            }
-          });
+          // Force model update
+          modelViewer.dispatchEvent(new CustomEvent('load'));
           
-          statusDisplay.textContent = `Video playing on ${videoMeshes.length} meshes`;
+          statusDisplay.textContent = 'Video playing on model!';
           playButton.style.display = 'none';
           
         } catch (error) {
