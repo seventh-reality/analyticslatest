@@ -45,7 +45,13 @@
     videoElement.loop = true;
     videoElement.muted = true;
     videoElement.autoplay = true;  // Ensure the video starts automatically
-    videoElement.play().catch(err => console.error("Video playback failed", err)); // Handle errors
+
+    // Attempt to play the video and handle errors
+    videoElement.play().then(() => {
+      console.log("Video is playing.");
+    }).catch((error) => {
+      console.error("Video playback failed:", error);
+    });
 
     // Wait for the model-viewer element to be defined
     customElements.whenDefined('model-viewer').then(() => {
@@ -71,6 +77,15 @@
         material.alphaTest = 0.5;  // This may need to be adjusted based on your video (for green screen)
       });
     });
+
+    // Check if the video element is loaded properly
+    videoElement.oncanplay = () => {
+      console.log("Video is ready to play.");
+    };
+
+    videoElement.onerror = (e) => {
+      console.error("Error loading video:", e);
+    };
   </script>
   
   <script src="script.js"></script>
