@@ -1,100 +1,66 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive 3D Model</title>
-  <link rel="stylesheet" href="styles.css">
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@1.9.2/dist/model-viewer.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #f0f0f0;
-    }
+  <title>&lt;model-viewer&gt; template</title>
+  <meta charset="utf-8">
+  <meta name="description" content="&lt;model-viewer&gt; template">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link type="text/css" href="./styles.css" rel="stylesheet" />
 
-    .container {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
-    model-viewer {
-      width: 80%;
-      height: 80%;
-      background-color: #000;
-    }
-
-    .controls {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .controls button {
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      padding: 10px;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-      transition: background-color 0.3s;
-    }
-
-    .controls button:hover {
-      background-color: rgba(0, 0, 0, 0.8);
-    }
-
-  </style>
-</head>
-<body>
-
-<div class="container">
-  <model-viewer id="model" src="CT_Room.glb" alt="3D Model" ar ar-modes="webxr scene-viewer quick-look"
-               camera-controls auto-rotate poster="model-poster.jpg">
-    <div slot="ar-button" class="ar-button">
-      <button>View in AR</button>
-    </div>
-  </model-viewer>
-
-  <!-- Controls for interaction -->
-  <div class="controls">
-    <button onclick="toggleAutoRotate()">Toggle Auto-Rotate</button>
-    <button onclick="zoomIn()">Zoom In</button>
-    <button onclick="zoomOut()">Zoom Out</button>
-  </div>
-</div>
-
-<script>
-  // Select the model-viewer element
-  const modelViewer = document.querySelector('model-viewer');
-
-  // Toggle auto-rotation
-  function toggleAutoRotate() {
-    modelViewer.autoRotate = !modelViewer.autoRotate;
+  <script type="importmap-shim">
+{
+  "imports": {
+    "three": "./model-viewer-301.min.js"
   }
-
-  // Zoom In
-  function zoomIn() {
-    const currentFov = modelViewer.cameraOrbit.split(' ')[0];
-    const newFov = parseFloat(currentFov) - 10;
-    modelViewer.cameraOrbit = `${newFov}deg ${currentFov.split(' ')[1]} ${currentFov.split(' ')[2]}`;
-  }
-
-  // Zoom Out
-  function zoomOut() {
-    const currentFov = modelViewer.cameraOrbit.split(' ')[0];
-    const newFov = parseFloat(currentFov) + 10;
-    modelViewer.cameraOrbit = `${newFov}deg ${currentFov.split(' ')[1]} ${currentFov.split(' ')[2]}`;
-  }
+}
 </script>
 
+  <script type="module-shim" src="model-viewer-301.min.js"></script>
+</head>
+
+<body>
+  <!-- <model-viewer> HTML element -->
+  <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
+    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+    <div class="progress-bar hide" slot="progress-bar">
+      <div class="update-bar"></div>
+    </div>
+    <button slot="ar-button" id="ar-button">
+      View in your space
+    </button>
+    <div id="ar-prompt">
+      <img src="ar_hand_prompt.png">
+    </div>
+  </model-viewer>
+  <script type="module">
+    const modelViewerAnimated = document.querySelector("model-viewer#animated");
+
+    let videoTexture = null;
+
+
+    customElements.whenDefined('model-viewer').then(() => {
+      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+    });
+
+
+
+    modelViewerAnimated.addEventListener("load", async () => {
+
+      const material = modelViewerAnimated.model.materials[0];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+      console.log(modelViewerAnimated.model.materials)
+
+
+      baseColorTexture.setTexture(videoTexture);
+
+    });
+
+  </script>
+  <script src="script.js"></script>
+
 </body>
+
 </html>
