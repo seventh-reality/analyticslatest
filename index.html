@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Video Texture with Visual Indicator</title>
+  <title>Video on 3D Plane</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
@@ -10,7 +10,6 @@
       width: 100%;
       height: 100vh;
       background-color: #f0f0f0;
-      position: relative;
     }
     #controls {
       position: absolute;
@@ -39,7 +38,7 @@
       border-radius: 5px;
       z-index: 10;
     }
-    #video-display {
+    #video-debug {
       position: absolute;
       bottom: 80px;
       right: 20px;
@@ -47,30 +46,20 @@
       background: black;
       border: 2px solid white;
       z-index: 10;
-      display: none;
-    }
-    #highlight {
-      position: absolute;
-      border: 2px solid red;
-      pointer-events: none;
-      display: none;
-      z-index: 5;
     }
   </style>
 </head>
 <body>
   <model-viewer id="modelViewer" src="all.glb" camera-controls shadow-intensity="1">
     <div id="controls">
-      <button id="play-button">Play Video</button>
+      <button id="play-button">Play Video on pPlane1</button>
       <button id="mute-button">Unmute</button>
-      <button id="show-video">Show Video Source</button>
     </div>
-    <div id="status">Ready to load video texture</div>
-    <div id="video-display">
-      <p>Video Texture Preview:</p>
-      <video id="video-preview" width="200" controls></video>
+    <div id="status">Ready to load video texture on pPlane1</div>
+    <div id="video-debug">
+      <p>Video Source:</p>
+      <video id="video-preview" width="200" muted></video>
     </div>
-    <div id="highlight"></div>
   </model-viewer>
 
   <script type="module">
@@ -78,11 +67,8 @@
       const modelViewer = document.querySelector('#modelViewer');
       const playButton = document.querySelector('#play-button');
       const muteButton = document.querySelector('#mute-button');
-      const showVideoBtn = document.querySelector('#show-video');
       const statusDisplay = document.querySelector('#status');
-      const videoDisplay = document.querySelector('#video-display');
       const videoPreview = document.querySelector('#video-preview');
-      const highlight = document.querySelector('#highlight');
       
       // Create video element
       const video = document.createElement('video');
@@ -93,9 +79,12 @@
       video.crossOrigin = 'anonymous';
       videoPreview.src = 'Video.mp4';
       
-      // Track which part of model has video
-      let videoMaterial = null;
-      let videoMesh = null;
+      // Mute/unmute control
+      muteButton.addEventListener('click', () => {
+        video.muted = !video.muted;
+        videoPreview.muted = !videoPreview.muted;
+        muteButton.textContent = video.muted ? 'Unmute' : 'Mute';
+      });
       
       // Wait for model-viewer to be ready
       await customElements.whenDefined('model-viewer');
@@ -105,97 +94,65 @@
         modelViewer.addEventListener('load', resolve, { once: true });
       });
       
-      // Mute/unmute control
-      muteButton.addEventListener('click', () => {
-        video.muted = !video.muted;
-        videoPreview.muted = !videoPreview.muted;
-        muteButton.textContent = video.muted ? 'Unmute' : 'Mute';
-      });
-      
-      // Show/hide video preview
-      showVideoBtn.addEventListener('click', () => {
-        videoDisplay.style.display = videoDisplay.style.display === 'none' ? 'block' : 'none';
-        if (videoDisplay.style.display === 'block') {
-          videoPreview.play();
-        } else {
-          videoPreview.pause();
-        }
-      });
-      
-      // Highlight mesh with video
-      function highlightVideoMesh() {
-        if (!videoMesh) return;
-        
-        // Get mesh position and size
-        const meshBox = new THREE.Box3().setFromObject(videoMesh);
-        const size = meshBox.getSize(new THREE.Vector3());
-        const center = meshBox.getCenter(new THREE.Vector3());
-        
-        // Convert to screen coordinates
-        const width = modelViewer.clientWidth;
-        const height = modelViewer.clientHeight;
-        const vector = new THREE.Vector3(center.x, center.y, center.z);
-        vector.project(modelViewer.camera);
-        
-        const x = (vector.x * 0.5 + 0.5) * width;
-        const y = -(vector.y * 0.5 - 0.5) * height;
-        
-        // Position highlight div
-        highlight.style.display = 'block';
-        highlight.style.left = `${x - size.x/2}px`;
-        highlight.style.top = `${y - size.y/2}px`;
-        highlight.style.width = `${size.x}px`;
-        highlight.style.height = `${size.y}px`;
-      }
-      
       // Play button handler
       playButton.addEventListener('click', async () => {
         try {
-          statusDisplay.textContent = 'Loading video...';
+          statusDisplay.textContent = 'Loading video for pPlane1...';
           
+          // Ensure video is ready
           await new Promise((resolve, reject) => {
             video.addEventListener('canplaythrough', resolve, { once: true });
             video.addEventListener('error', reject, { once: true });
             video.load();
           });
           
+          // Start playback
           await video.play();
-          
-          statusDisplay.textContent = 'Video playing on 3D model!';
-          playButton.style.display = 'none';
+          videoPreview.play();
           
           // Create video texture
           const videoTexture = new THREE.VideoTexture(video);
           videoTexture.encoding = THREE.sRGBEncoding;
           
-          // Find the first mesh that can receive textures
-          modelViewer.model.materials.forEach((material, index) => {
-            if (material.pbrMetallicRoughness && !videoMaterial) {
-              videoMaterial = material;
-              material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-              material.transparent = true;
-              material.alphaTest = 0.1;
-              material.needsUpdate = true;
-              
-              // Find the mesh using this material
-              modelViewer.model.scene.traverse((child) => {
-                if (child.isMesh && child.material === material && !videoMesh) {
-                  videoMesh = child;
-                  highlightVideoMesh();
-                  
-                  // Update highlight when camera moves
-                  modelViewer.addEventListener('camera-change', highlightVideoMesh);
-                }
-              });
+          // Find pPlane1 in the model
+          let targetPlane = null;
+          modelViewer.model.scene.traverse((child) => {
+            if (child.isMesh && child.name === 'pPlane1') {
+              targetPlane = child;
             }
           });
           
-          if (!videoMaterial) {
-            statusDisplay.textContent = 'No suitable material found for video texture';
+          if (!targetPlane) {
+            throw new Error('Could not find pPlane1 in the model');
+          }
+          
+          // Apply video texture to pPlane1
+          targetPlane.material = new THREE.MeshBasicMaterial({
+            map: videoTexture,
+            transparent: true,
+            side: THREE.DoubleSide
+          });
+          
+          statusDisplay.textContent = 'Video playing on pPlane1!';
+          playButton.style.display = 'none';
+          
+          // Adjust plane UVs if video appears stretched
+          const geometry = targetPlane.geometry;
+          const uvAttribute = geometry.getAttribute('uv');
+          
+          // Modify UVs to match video aspect ratio if needed
+          if (video.videoWidth && video.videoHeight) {
+            const videoAspect = video.videoWidth / video.videoHeight;
+            for (let i = 0; i < uvAttribute.count; i++) {
+              const u = uvAttribute.getX(i);
+              const v = uvAttribute.getY(i);
+              uvAttribute.setXY(i, u * videoAspect, v);
+            }
+            uvAttribute.needsUpdate = true;
           }
           
         } catch (error) {
-          console.error('Video playback failed:', error);
+          console.error('Error:', error);
           statusDisplay.textContent = 'Error: ' + error.message;
           playButton.textContent = 'Retry Playback';
         }
