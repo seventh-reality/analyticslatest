@@ -1,55 +1,66 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <title>Model Viewer with Multiple Models</title>
+  <title>&lt;model-viewer&gt; template</title>
   <meta charset="utf-8">
-  <meta name="description" content="Model Viewer Template">
+  <meta name="description" content="&lt;model-viewer&gt; template">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link type="text/css" href="./styles.css" rel="stylesheet" />
 
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
   <script type="importmap-shim">
-  {
-    "imports": {
-      "three": "./model-viewer-301.min.js"
-    }
+{
+  "imports": {
+    "three": "./model-viewer-301.min.js"
   }
-  </script>
-  <script type="module-shim" src="model-viewer-301.min.js"></script>
-</head>
-<body>
-
-<!-- Model Viewer Scene -->
-<model-viewer id="scene" src="pl.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls 
-  poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
-</model-viewer>
-
-<script type="module">
-  const modelViewer = document.querySelector("#scene");
-
-  modelViewer.addEventListener("load", async () => {
-    console.log("First model loaded!");
-
-    // Ensure the scene is loaded before adding a second model
-    const scene = modelViewer.scene;
-    if (!scene) {
-      console.error("Scene not found in model-viewer.");
-      return;
-    }
-
-    // Load the second model and attach it to the first model's scene
-    const model2 = await modelViewer.model.load("CT_Room.glb");
-    
-    if (model2) {
-      scene.add(model2);
-      console.log("Second model loaded and added to scene!");
-    } else {
-      console.error("Failed to load second model.");
-    }
-  });
+}
 </script>
 
-<script src="script.js"></script>
+  <script type="module-shim" src="model-viewer-301.min.js"></script>
+</head>
+
+<body>
+  <!-- <model-viewer> HTML element -->
+  <model-viewer id="animated" src="pl.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
+    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+    <div class="progress-bar hide" slot="progress-bar">
+      <div class="update-bar"></div>
+    </div>
+    <button slot="ar-button" id="ar-button">
+      View in your space
+    </button>
+    <div id="ar-prompt">
+      <img src="ar_hand_prompt.png">
+    </div>
+  </model-viewer>
+  <script type="module">
+    const modelViewerAnimated = document.querySelector("model-viewer#animated");
+
+    let videoTexture = null;
+
+
+    customElements.whenDefined('model-viewer').then(() => {
+      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+    });
+
+
+
+    modelViewerAnimated.addEventListener("load", async () => {
+
+      const material = modelViewerAnimated.model.materials[0];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+      console.log(modelViewerAnimated.model.materials)
+
+
+      baseColorTexture.setTexture(videoTexture);
+
+    });
+
+  </script>
+  <script src="script.js"></script>
 
 </body>
+
 </html>
