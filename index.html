@@ -31,7 +31,6 @@
     <button slot="ar-button" id="ar-button">
       View in your space
     </button>
-    <!-- Removed missing ar_hand_prompt.png reference -->
   </model-viewer>
 
   <script type="module">
@@ -54,7 +53,7 @@
         await new Promise((resolve) => {
           modelViewerAnimated.addEventListener('load', resolve, { once: true });
         });
-        
+
         // Create a button to start the video
         const playButton = document.createElement('button');
         playButton.textContent = 'Play Video Texture';
@@ -76,13 +75,7 @@
             await videoElement.play();
             console.log("Video playback started");
             
-            // Get the Three.js scene from model-viewer
-            const scene = modelViewerAnimated.querySelector('canvas').__threeScene;
-            if (!scene) {
-              throw new Error("Three.js scene not found");
-            }
-            
-            // Create video texture
+            // Create video texture - THREE should be available globally from model-viewer
             const videoTexture = new THREE.VideoTexture(videoElement);
             videoTexture.encoding = THREE.sRGBEncoding;
             
