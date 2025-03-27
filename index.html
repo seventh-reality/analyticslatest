@@ -20,74 +20,38 @@
 </head>
 
 <body>
-  <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
-    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
-    <div class="progress-bar hide" slot="progress-bar">
-      <div class="update-bar"></div>
-    </div>
-    <button slot="ar-button" id="ar-button">
-      View in your space
-    </button>
-    <div id="ar-prompt">
-      <img src="ar_hand_prompt.png">
-    </div>
-  </model-viewer>
+ <model-viewer id="usdzViewer" src="AL.usdz" ar ar-modes="scene-viewer quick-look" camera-controls>
+  <button slot="ar-button" id="ar-button">View in AR</button>
+</model-viewer>
 
-  <script type="module">
-    import * as THREE from "three";
+<!-- Overlaying a Video -->
+<video id="videoOverlay" src="Tiger.mp4" autoplay loop muted playsinline></video>
 
-    const modelViewer = document.querySelector("#animated");
+<script>
+  const modelViewer = document.getElementById("usdzViewer");
+  const videoOverlay = document.getElementById("videoOverlay");
 
-    modelViewer.addEventListener("load", async () => {
-      console.log("Model Loaded!");
+  modelViewer.addEventListener("quick-look-button-tap", () => {
+    videoOverlay.style.display = "block"; // Show video when entering AR
+    videoOverlay.play();
+  });
 
-      if (!modelViewer.model || !modelViewer.model.materials.length) {
-        console.error("No materials found on the model.");
-        return;
-      }
+  modelViewer.addEventListener("exit-ar", () => {
+    videoOverlay.style.display = "none"; // Hide when exiting AR
+    videoOverlay.pause();
+  });
+</script>
 
-      const material = modelViewer.model.materials[0];
-      console.log("Applying video texture to material:", material);
-
-      // Create the video element
-      const video = document.createElement("video");
-      video.src = "./Tiger.mp4"; // Ensure this path is correct
-      video.crossOrigin = "anonymous";
-      video.loop = true;
-      video.muted = true;
-      video.setAttribute("playsinline", ""); // Required for iOS
-      video.setAttribute("autoplay", ""); // Helps with autoplay issues
-      video.load();
-
-      // Ensure video plays after user interaction (iOS requires user input)
-      document.body.addEventListener("click", () => {
-        if (video.paused) {
-          video.play().then(() => {
-            console.log("Video started playing.");
-          }).catch(e => console.error("Video play error:", e));
-        }
-      });
-
-      // Create a THREE.js video texture manually
-      const videoTexture = new THREE.VideoTexture(video);
-      videoTexture.minFilter = THREE.LinearFilter;
-      videoTexture.magFilter = THREE.LinearFilter;
-      videoTexture.format = THREE.RGBAFormat;
-
-      // Apply the video texture to the material
-      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-
-      console.log("Video texture applied successfully.");
-
-      // Ensure the texture updates dynamically
-      function updateTexture() {
-        if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-          videoTexture.needsUpdate = true;
-        }
-        requestAnimationFrame(updateTexture);
-      }
-      updateTexture();
-    });
-  </script>
+<style>
+  #videoOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300px;
+    height: auto;
+    transform: translate(-50%, -50%);
+    display: none;
+  }
+</style
 </body>
 </html>
