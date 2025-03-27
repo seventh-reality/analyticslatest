@@ -35,39 +35,45 @@
 
   <script type="module">
     const modelViewer = document.querySelector("#animated");
-    let videoTexture = null;
 
     modelViewer.addEventListener("load", async () => {
       console.log("Model Loaded!");
 
-      // Check if model has materials
       if (!modelViewer.model || !modelViewer.model.materials.length) {
         console.error("No materials found on the model.");
         return;
       }
 
+      const material = modelViewer.model.materials[0];
+      console.log("Applying texture to material:", material);
+
       // Create the video element
-      const video = document.createElement('video');
-      video.src = "./Tiger.mp4"; // Change to your video path
+      const video = document.createElement("video");
+      video.src = "./Tiger.mp4"; // Ensure this path is correct
       video.crossOrigin = "anonymous";
       video.loop = true;
-      video.muted = true; // Required for autoplay
-      video.setAttribute("playsinline", ""); // Needed for iOS
+      video.muted = true;
+      video.setAttribute("playsinline", ""); // Required for iOS
+      video.setAttribute("autoplay", ""); // Helps with autoplay issues
       video.load();
 
-      // Ensure video plays after user interaction (important for iOS)
+      // Ensure video plays after user interaction (iOS requires user input)
       document.body.addEventListener("click", () => {
         if (video.paused) {
-          video.play().catch(e => console.error("Video play error:", e));
+          video.play().then(() => {
+            console.log("Video started playing.");
+          }).catch(e => console.error("Video play error:", e));
         }
       });
 
       // Create a video texture inside model-viewer
-      videoTexture = await modelViewer.createVideoTexture(video);
+      const videoTexture = await modelViewer.createVideoTexture(video);
 
-      // Apply the video texture to the first material's base color
-      const material = modelViewer.model.materials[0];
-      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+      // Wait a moment before applying the texture to ensure video starts
+      setTimeout(() => {
+        material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+        console.log("Video texture applied successfully.");
+      }, 500);
 
       // Ensure the texture updates dynamically
       function updateTexture() {
@@ -79,6 +85,5 @@
       updateTexture();
     });
   </script>
-
 </body>
 </html>
