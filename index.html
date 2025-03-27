@@ -36,87 +36,48 @@
   </model-viewer>
 
   <script type="module">
-    class THREEx_ChromaKeyMaterial {
-      constructor(url, keyColor) {
-        this.video = document.createElement('video');
-        this.video.src = url;
-        this.video.crossOrigin = "anonymous";
-        this.video.loop = true;
-        this.video.muted = true;
-        this.video.load();
+    const modelViewer = document.querySelector("#animated");
+    let video, videoTexture;
 
-        this.keyColorObject = new THREE.Color(keyColor);
-        this.videoTexture = new THREE.VideoTexture(this.video);
-        this.videoTexture.minFilter = THREE.LinearFilter;
-        this.videoTexture.magFilter = THREE.LinearFilter;
-        this.videoTexture.format = THREE.RGBAFormat;
-
-        this.material = new THREE.ShaderMaterial({
-          uniforms: {
-            texture: { value: this.videoTexture },
-            color: { value: this.keyColorObject }
-          },
-          vertexShader: `
-            varying vec2 vUv;
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            uniform sampler2D texture;
-            uniform vec3 color;
-            varying vec2 vUv;
-            void main() {
-              vec4 tColor = texture2D(texture, vUv);
-              float diff = length(tColor.rgb - color);
-              float alpha = smoothstep(0.2, 0.5, diff);
-              gl_FragColor = vec4(tColor.rgb, alpha);
-            }
-          `,
-          transparent: true
-        });
-      }
-
-      startVideo() {
-        this.video.play();
-      }
-
-      stopVideo() {
-        this.video.pause();
-        this.video.src = "";
-      }
-
-      update() {
-        if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
-          this.videoTexture.needsUpdate = true;
-        }
-      }
-    }
-
-    const modelViewerAnimated = document.querySelector("model-viewer#animated");
-    let chromaKeyMaterial = null;
-
-    modelViewerAnimated.addEventListener("load", async () => {
-      const model = modelViewerAnimated.model;
+    modelViewer.addEventListener("load", async () => {
+      const model = modelViewer.model;
       if (!model) {
         console.error("Model not loaded yet.");
         return;
       }
 
-      const material = model.materials[0];  // Assuming the first material
-      chromaKeyMaterial = new THREEx_ChromaKeyMaterial("./Tiger.mp4", 0x00ff00); // Green as key color
-      chromaKeyMaterial.startVideo();
+      // Create the video element
+      video = document.createElement('video');
+      video.src = "./Tiger.mp4"; // Change this to your video path
+      video.crossOrigin = "anonymous";
+      video.loop = true;
+      video.muted = true; // Important for autoplay
+      video.setAttribute("playsinline", ""); // Ensures video plays on iOS
+      video.load();
 
-      // Replace the model's base color texture with chroma key video texture
-      material.pbrMetallicRoughness.baseColorTexture.setTexture(chromaKeyMaterial.material.uniforms.texture.value);
+      // Play the video after a user interaction
+      document.body.addEventListener("click", () => {
+        video.play().catch(e => console.error("Video play failed:", e));
+      });
 
-      // Update video texture on each frame
-      function update() {
-        if (chromaKeyMaterial) chromaKeyMaterial.update();
-        requestAnimationFrame(update);
+      // Create the video texture
+      videoTexture = new THREE.VideoTexture(video);
+      videoTexture.minFilter = THREE.LinearFilter;
+      videoTexture.magFilter = THREE.LinearFilter;
+      videoTexture.format = THREE.RGBAFormat;
+
+      // Apply the texture to the model's first material
+      const material = model.materials[0];
+      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+
+      // Start the animation loop to update the video texture
+      function updateTexture() {
+        if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+          videoTexture.needsUpdate = true;
+        }
+        requestAnimationFrame(updateTexture);
       }
-      update();
+      updateTexture();
     });
   </script>
 
