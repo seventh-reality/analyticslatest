@@ -34,6 +34,8 @@
   </model-viewer>
 
   <script type="module">
+    import * as THREE from "three";
+
     const modelViewer = document.querySelector("#animated");
 
     modelViewer.addEventListener("load", async () => {
@@ -45,7 +47,7 @@
       }
 
       const material = modelViewer.model.materials[0];
-      console.log("Applying texture to material:", material);
+      console.log("Applying video texture to material:", material);
 
       // Create the video element
       const video = document.createElement("video");
@@ -66,14 +68,16 @@
         }
       });
 
-      // Create a video texture inside model-viewer
-      const videoTexture = await modelViewer.createVideoTexture(video);
+      // Create a THREE.js video texture manually
+      const videoTexture = new THREE.VideoTexture(video);
+      videoTexture.minFilter = THREE.LinearFilter;
+      videoTexture.magFilter = THREE.LinearFilter;
+      videoTexture.format = THREE.RGBAFormat;
 
-      // Wait a moment before applying the texture to ensure video starts
-      setTimeout(() => {
-        material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-        console.log("Video texture applied successfully.");
-      }, 100);
+      // Apply the video texture to the material
+      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+
+      console.log("Video texture applied successfully.");
 
       // Ensure the texture updates dynamically
       function updateTexture() {
