@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <title>Model Viewer with Chroma Key Video</title>
+  <title>Model Viewer with Video Texture</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link type="text/css" href="./styles.css" rel="stylesheet" />
-
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap-shim">
   {
@@ -15,43 +12,49 @@
     }
   }
   </script>
-
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
-
 <body>
- <model-viewer id="usdzViewer"   src="all.glb"  ios-src="all.usdz" ar ar-modes="scene-viewer quick-look" camera-controls>
-  <button slot="ar-button" id="ar-button">View in AR</button>
-</model-viewer>
+  <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer" camera-controls>
+    <button slot="ar-button" id="ar-button">View in AR</button>
+  </model-viewer>
 
-<!-- Overlaying a Video -->
-<video id="videoOverlay" src="Tiger.mp4" autoplay loop muted playsinline></video>
+  <script type="module">
+    const modelViewer = document.getElementById("animated");
 
-<script>
-  const modelViewer = document.getElementById("usdzViewer");
-  const videoOverlay = document.getElementById("videoOverlay");
+    modelViewer.addEventListener("load", async () => {
+      console.log("Model Loaded!");
 
-  modelViewer.addEventListener("quick-look-button-tap", () => {
-    videoOverlay.style.display = "block"; // Show video when entering AR
-    videoOverlay.play();
-  });
+      if (!modelViewer.model || !modelViewer.model.materials.length) {
+        console.error("No materials found on the model.");
+        return;
+      }
 
-  modelViewer.addEventListener("exit-ar", () => {
-    videoOverlay.style.display = "none"; // Hide when exiting AR
-    videoOverlay.pause();
-  });
-</script>
+      // Create a video element
+      const video = document.createElement("video");
+      video.src = "./Tiger.mp4"; // Ensure this path is correct
+      video.crossOrigin = "anonymous";
+      video.loop = true;
+      video.muted = true;
+      video.setAttribute("playsinline", ""); // Required for iOS
+      video.setAttribute("autoplay", ""); // Helps with autoplay issues
+      video.load();
 
-<style>
-  #videoOverlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300px;
-    height: auto;
-    transform: translate(-50%, -50%);
-    display: none;
-  }
-</style>
+      // Ensure video plays after user interaction (iOS requires user input)
+      document.body.addEventListener("click", () => {
+        if (video.paused) {
+          video.play().catch(e => console.error("Video play error:", e));
+        }
+      });
+
+      // Create a video texture
+      const videoTexture = await modelViewer.createVideoTexture(video);
+
+      // Apply the video texture to the first material
+      const material = modelViewer.model.materials[0];
+      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+      console.log("Video texture applied successfully.");
+    });
+  </script>
 </body>
 </html>
