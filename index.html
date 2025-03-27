@@ -2,27 +2,26 @@
 <html lang="en">
 
 <head>
-  <title>&lt;model-viewer&gt; template</title>
+  <title>&lt;model-viewer&gt; with Chroma Key Video</title>
   <meta charset="utf-8">
-  <meta name="description" content="&lt;model-viewer&gt; template">
+  <meta name="description" content="&lt;model-viewer&gt; with Chroma Key Video">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link type="text/css" href="./styles.css" rel="stylesheet" />
 
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-{
-  "imports": {
-    "three": "./model-viewer-301.min.js"
+  {
+    "imports": {
+      "three": "./model-viewer-301.min.js"
+    }
   }
-}
-</script>
+  </script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
 
 <body>
-  <!-- <model-viewer> HTML element -->
   <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
     poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
     <div class="progress-bar hide" slot="progress-bar">
@@ -35,32 +34,93 @@
       <img src="ar_hand_prompt.png">
     </div>
   </model-viewer>
+
   <script type="module">
+    class THREEx_ChromaKeyMaterial {
+      constructor(url, keyColor) {
+        this.video = document.createElement('video');
+        this.video.src = url;
+        this.video.crossOrigin = "anonymous";
+        this.video.loop = true;
+        this.video.muted = true;
+        this.video.load();
+
+        this.keyColorObject = new THREE.Color(keyColor);
+        this.videoTexture = new THREE.VideoTexture(this.video);
+        this.videoTexture.minFilter = THREE.LinearFilter;
+        this.videoTexture.magFilter = THREE.LinearFilter;
+        this.videoTexture.format = THREE.RGBAFormat;
+
+        this.material = new THREE.ShaderMaterial({
+          uniforms: {
+            texture: { value: this.videoTexture },
+            color: { value: this.keyColorObject }
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform sampler2D texture;
+            uniform vec3 color;
+            varying vec2 vUv;
+            void main() {
+              vec4 tColor = texture2D(texture, vUv);
+              float diff = length(tColor.rgb - color);
+              float alpha = smoothstep(0.2, 0.5, diff);
+              gl_FragColor = vec4(tColor.rgb, alpha);
+            }
+          `,
+          transparent: true
+        });
+      }
+
+      startVideo() {
+        this.video.play();
+      }
+
+      stopVideo() {
+        this.video.pause();
+        this.video.src = "";
+      }
+
+      update() {
+        if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+          this.videoTexture.needsUpdate = true;
+        }
+      }
+    }
+
     const modelViewerAnimated = document.querySelector("model-viewer#animated");
-
-    let videoTexture = null;
-
-
-    customElements.whenDefined('model-viewer').then(() => {
-      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
-    });
-
-
+    let chromaKeyMaterial = null;
 
     modelViewerAnimated.addEventListener("load", async () => {
+      const model = modelViewerAnimated.model;
+      if (!model) {
+        console.error("Model not loaded yet.");
+        return;
+      }
 
-      const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
+      const material = model.materials[0];  // Assuming the first material
+      chromaKeyMaterial = new THREEx_ChromaKeyMaterial("./Video.mp4", 0x00ff00); // Green as key color
+      chromaKeyMaterial.startVideo();
 
+      // Replace the model's base color texture with chroma key video texture
+      material.pbrMetallicRoughness.baseColorTexture.setTexture(chromaKeyMaterial.material.uniforms.texture.value);
 
-      baseColorTexture.setTexture(videoTexture);
-
+      // Update video texture on each frame
+      function update() {
+        if (chromaKeyMaterial) chromaKeyMaterial.update();
+        requestAnimationFrame(update);
+      }
+      update();
     });
-
   </script>
-  <script src="script.js"></script>
 
+  <script src="script.js"></script>
 </body>
 
 </html>
