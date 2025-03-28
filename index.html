@@ -113,6 +113,13 @@
       width: 1.5m;
       height: 1m;
       background-color: transparent;
+      transform: translate3d(0, 0, 0);
+    }
+    
+    #ar-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
   </style>
 </head>
@@ -175,7 +182,8 @@
         minIOSVersion: 11.0,
         minAndroidVersion: 8.0,
         arLaunchTimeout: 5000,
-        videoPlaneSize: { width: 1.5, height: 1 } // meters
+        videoPlaneSize: { width: 1.5, height: 1 }, // meters
+        videoOffset: { x: 0, y: 0, z: -0.5 } // meters (negative z places it behind the model)
       };
       
       // State
@@ -293,6 +301,9 @@
         arVideoPlane.style.width = config.videoPlaneSize.width + 'm';
         arVideoPlane.style.height = config.videoPlaneSize.height + 'm';
         arVideoPlane.style.display = 'block';
+        
+        // Position the video relative to the model
+        arVideoPlane.style.transform = `translate3d(${config.videoOffset.x}m, ${config.videoOffset.y}m, ${config.videoOffset.z}m)`;
       }
       
       // Launch AR experience
