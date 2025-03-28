@@ -1,60 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-  <title>Model Viewer with Video Texture</title>
+  <title>&lt;model-viewer&gt; template</title>
   <meta charset="utf-8">
+  <meta name="description" content="&lt;model-viewer&gt; template">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link type="text/css" href="./styles.css" rel="stylesheet" />
+
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
   <script type="importmap-shim">
-  {
-    "imports": {
-      "three": "./model-viewer-301.min.js"
-    }
+{
+  "imports": {
+    "three": "./model-viewer-301.min.js"
   }
-  </script>
+}
+</script>
+
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
+
 <body>
-  <model-viewer id="animated" src="all.glb" ios-src="Fish.usdc" ar ar-modes="webxr scene-viewer" camera-controls>
-    <button slot="ar-button" id="ar-button">View in AR</button>
+  <!-- <model-viewer> HTML element -->
+  <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
+    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
+    <div class="progress-bar hide" slot="progress-bar">
+      <div class="update-bar"></div>
+    </div>
+    <button slot="ar-button" id="ar-button">
+      View in your space
+    </button>
+    <div id="ar-prompt">
+      <img src="ar_hand_prompt.png">
+    </div>
   </model-viewer>
-
   <script type="module">
-    const modelViewer = document.getElementById("animated");
+    const modelViewerAnimated = document.querySelector("model-viewer#animated");
 
-    modelViewer.addEventListener("load", async () => {
-      console.log("Model Loaded!");
+    let videoTexture = null;
 
-      if (!modelViewer.model || !modelViewer.model.materials.length) {
-        console.error("No materials found on the model.");
-        return;
-      }
 
-      // Create a video element
-      const video = document.createElement("video");
-      video.src = "./Tiger.mp4"; // Ensure this path is correct
-      video.crossOrigin = "anonymous";
-      video.loop = true;
-      video.muted = true;
-      video.setAttribute("playsinline", ""); // Required for iOS
-      video.setAttribute("autoplay", ""); // Helps with autoplay issues
-      video.load();
-
-      // Ensure video plays after user interaction (iOS requires user input)
-      document.body.addEventListener("click", () => {
-        if (video.paused) {
-          video.play().catch(e => console.error("Video play error:", e));
-        }
-      });
-
-      // Create a video texture
-      const videoTexture = await modelViewer.createVideoTexture(video);
-
-      // Apply the video texture to the first material
-      const material = modelViewer.model.materials[0];
-      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
-      console.log("Video texture applied successfully.");
+    customElements.whenDefined('model-viewer').then(() => {
+      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
     });
+
+
+
+    modelViewerAnimated.addEventListener("load", async () => {
+
+      const material = modelViewerAnimated.model.materials[0];
+      const {baseColorTexture} = material.pbrMetallicRoughness;
+      console.log(modelViewerAnimated.model.materials)
+
+
+      baseColorTexture.setTexture(videoTexture);
+
+    });
+
   </script>
+  <script src="script.js"></script>
+
 </body>
+
 </html>
