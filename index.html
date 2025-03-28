@@ -1,74 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script type="module" src="https://unpkg.com/@google/model-viewer@3.1.1/dist/model-viewer.min.js"></script>
-  <title>USDZ + Green Screen AR</title>
+  <title>USDZ AR with Green Screen</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; }
-    model-viewer { width: 100vw; height: 100vh; }
-    #video-bg {
+    body { 
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+    }
+    
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      --poster-color: transparent;
+    }
+    
+    #video-container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
       z-index: -1;
+      overflow: hidden;
+    }
+    
+    #video-bg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .ar-button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 50px;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
+      z-index: 100;
     }
   </style>
 </head>
 <body>
-  <!-- Green Screen Video Background -->
-  <video id="video-bg" autoplay loop muted>
-    <source src="Tiger.mp4" type="video/mp4">
-  </video>
+  <!-- Loading indicator -->
+  <div id="loading">Loading AR experience...</div>
 
-  <!-- Model-Viewer for USDZ -->
+  <!-- Video background -->
+  <div id="video-container">
+    <video id="video-bg" autoplay loop muted playsinline>
+      <source src="your-video.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- Model Viewer AR -->
   <model-viewer
-    src="all.usdz"
+    id="ar-model"
+    src="your-model.usdz"
     ar
     ar-modes="webxr scene-viewer quick-look"
     camera-controls
     environment-image="neutral"
     shadow-intensity="1"
+    auto-rotate
+    camera-orbit="0deg 75deg 105%"
+    alt="3D model"
   >
-    <button slot="ar-button" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+    <button class="ar-button" slot="ar-button">
       View in AR
     </button>
   </model-viewer>
 
-  <!-- Chroma Key Effect (Green Screen Removal) -->
   <script>
-    const video = document.getElementById('video-bg');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    function applyChromaKey() {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        // Remove green pixels (adjust threshold as needed)
-        if (g > 150 && r < 100 && b < 100) {
-          data[i + 3] = 0; // Set alpha to 0 (transparent)
+    document.addEventListener('DOMContentLoaded', () => {
+      const loading = document.getElementById('loading');
+      const modelViewer = document.getElementById('ar-model');
+      const video = document.getElementById('video-bg');
+      
+      // Hide loading when model is ready
+      modelViewer.addEventListener('load', () => {
+        loading.style.display = 'none';
+      });
+      
+      // Handle AR button click
+      const arButton = document.querySelector('.ar-button');
+      arButton.addEventListener('click', () => {
+        // Pause video when entering AR
+        video.pause();
+      });
+      
+      // Handle AR exit
+      modelViewer.addEventListener('ar-status', (event) => {
+        if (event.detail.status === 'not-presenting') {
+          // Resume video when exiting AR
+          video.play();
         }
+      });
+      
+      // Check for WebXR support
+      if (!navigator.xr) {
+        arButton.textContent = 'AR Not Supported';
+        arButton.disabled = true;
       }
-
-      ctx.putImageData(imageData, 0, 0);
-      video.style.display = 'none';
-      document.body.style.background = `url(${canvas.toDataURL()})`;
-      requestAnimationFrame(applyChromaKey);
-    }
-
-    video.addEventListener('loadeddata', () => {
-      applyChromaKey();
     });
   </script>
 </body>
