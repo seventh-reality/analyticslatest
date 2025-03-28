@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Reliable USDZ AR Viewer</title>
+  <title>USDZ AR Viewer with Video</title>
   <script src="https://unpkg.com/@google/model-viewer@2.1.1/dist/model-viewer.min.js"></script>
   <script src="https://unpkg.com/@google/model-viewer@2.1.1/dist/model-viewer-legacy.js"></script>
   <style>
@@ -109,8 +109,10 @@
 </head>
 <body>
   <div id="container">
-    <video id="video-bg" autoplay loop muted playsinline webkit-playsinline>
+    <!-- Video Background - Added preload attribute for iOS -->
+    <video id="video-bg" autoplay loop muted playsinline webkit-playsinline preload="auto">
       <source src="Tiger.mp4" type="video/mp4">
+      Your browser does not support the video tag.
     </video>
     
     <model-viewer
@@ -166,14 +168,54 @@
       // Initialize
       function init() {
         detectPlatform();
-        checkARSupport().then(supported => {
-          if (supported) {
-            setupAR();
-          } else {
-            showUnsupported("Your device doesn't support AR features");
+        
+        // Ensure video loads on iOS
+        if (isIOS) {
+          forceVideoLoad().then(() => {
+            checkARSupport().then(supported => {
+              if (supported) {
+                setupAR();
+              } else {
+                showUnsupported("Your device doesn't support AR features");
+              }
+            });
+          }).catch(error => {
+            showUnsupported("Error loading video: " + error.message);
+          });
+        } else {
+          checkARSupport().then(supported => {
+            if (supported) {
+              setupAR();
+            } else {
+              showUnsupported("Your device doesn't support AR features");
+            }
+          });
+        }
+      }
+      
+      // Force video load on iOS
+      function forceVideoLoad() {
+        return new Promise((resolve, reject) => {
+          if (videoBg.readyState >= 3) { // HAVE_FUTURE_DATA
+            return resolve();
           }
-        }).catch(error => {
-          showUnsupported("Error checking AR support: " + error.message);
+          
+          videoBg.load();
+          
+          const onLoaded = () => {
+            videoBg.removeEventListener('loadeddata', onLoaded);
+            videoBg.removeEventListener('error', onError);
+            resolve();
+          };
+          
+          const onError = () => {
+            videoBg.removeEventListener('loadeddata', onLoaded);
+            videoBg.removeEventListener('error', onError);
+            reject(new Error("Video failed to load"));
+          };
+          
+          videoBg.addEventListener('loadeddata', onLoaded, { once: true });
+          videoBg.addEventListener('error', onError, { once: true });
         });
       }
       
@@ -238,7 +280,11 @@
         
         statusDiv.textContent = "Launching AR...";
         arButton.disabled = true;
-        videoBg.pause();
+        
+        // For iOS, we'll handle the video separately
+        if (!isIOS) {
+          videoBg.pause();
+        }
         
         // Absolute URL for USDZ file
         const usdzUrl = new URL('all.usdz', window.location.href).href;
@@ -263,9 +309,36 @@
         if (event.detail.status === 'session-started') {
           arSessionActive = true;
           statusDiv.textContent = "AR session started";
+          
+          // On iOS, we need to handle the video specially
+          if (isIOS) {
+            // Create a temporary video element for AR session
+            const arVideo = document.createElement('video');
+            arVideo.src = 'Tiger.mp4';
+            arVideo.autoplay = true;
+            arVideo.loop = true;
+            arVideo.muted = true;
+            arVideo.playsinline = true;
+            arVideo.style.position = 'absolute';
+            arVideo.style.top = '0';
+            arVideo.style.left = '0';
+            arVideo.style.width = '100%';
+            arVideo.style.height = '100%';
+            arVideo.style.objectFit = 'cover';
+            arVideo.style.zIndex = '-1';
+            document.body.appendChild(arVideo);
+          }
         } else if (event.detail.status === 'not-presenting') {
           arSessionActive = false;
-          videoBg.play();
+          
+          if (!isIOS) {
+            videoBg.play();
+          } else {
+            // Remove any temporary AR video elements
+            const arVideos = document.querySelectorAll('video[data-ar-video]');
+            arVideos.forEach(video => video.remove());
+          }
+          
           arButton.disabled = false;
           statusDiv.textContent = "AR session ended";
         }
@@ -290,7 +363,11 @@
       // Handle AR errors
       function handleARError(error) {
         statusDiv.textContent = "AR error: " + error.message;
-        videoBg.play();
+        
+        if (!isIOS) {
+          videoBg.play();
+        }
+        
         arButton.disabled = false;
         
         // Try fallback after short delay
