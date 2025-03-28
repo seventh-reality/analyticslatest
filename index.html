@@ -1,94 +1,75 @@
-<!doctype html>
-<html lang="en">
-
+<!DOCTYPE html>
+<html>
 <head>
-  <title>&lt;model-viewer&gt; with Chroma Key</title>
-  <meta charset="utf-8">
-  <meta name="description" content="&lt;model-viewer&gt; with Chroma Key">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link type="text/css" href="./styles.css" rel="stylesheet" />
-
-  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-
-  <script type="importmap-shim">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.min.js"
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.1.1/dist/model-viewer.min.js"></script>
+  <title>USDZ + Green Screen AR</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    model-viewer { width: 100vw; height: 100vh; }
+    #video-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
     }
-  }
-  </script>
-
-  <script type="module-shim" src="model-viewer-301.min.js"></script>
+  </style>
 </head>
-
 <body>
-  <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
-    poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
-    <div class="progress-bar hide" slot="progress-bar">
-      <div class="update-bar"></div>
-    </div>
-    <button slot="ar-button" id="ar-button">
-      View in your space
+  <!-- Green Screen Video Background -->
+  <video id="video-bg" autoplay loop muted>
+    <source src="Tiger.mp4" type="video/mp4">
+  </video>
+
+  <!-- Model-Viewer for USDZ -->
+  <model-viewer
+    src="all.usdz"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    camera-controls
+    environment-image="neutral"
+    shadow-intensity="1"
+  >
+    <button slot="ar-button" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+      View in AR
     </button>
-    <div id="ar-prompt">
-      <img src="ar_hand_prompt.png">
-    </div>
   </model-viewer>
 
-  <script type="module">
-    import * as THREE from "three";
+  <!-- Chroma Key Effect (Green Screen Removal) -->
+  <script>
+    const video = document.getElementById('video-bg');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    const modelViewer = document.querySelector("model-viewer#animated");
-
-    let video = document.createElement("video");
-    video.src = "./Tiger.mp4";
-    video.loop = true;
-    video.muted = true; // Required for autoplay in some browsers
-    video.autoplay = true;
-    video.crossOrigin = "anonymous";
-    video.playsInline = true; // Important for iOS
-    video.play();
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    video.addEventListener("loadeddata", () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      requestAnimationFrame(updateCanvas);
-    });
-
-    function updateCanvas() {
+    function applyChromaKey() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
 
-      let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let len = frame.data.length;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
 
-      for (let i = 0; i < len; i += 4) {
-        let r = frame.data[i];
-        let g = frame.data[i + 1];
-        let b = frame.data[i + 2];
-
-        if (g > 100 && r < 100 && b < 100) {
-          frame.data[i + 3] = 0; // Make green pixels transparent
+        // Remove green pixels (adjust threshold as needed)
+        if (g > 150 && r < 100 && b < 100) {
+          data[i + 3] = 0; // Set alpha to 0 (transparent)
         }
       }
-      ctx.putImageData(frame, 0, 0);
-      requestAnimationFrame(updateCanvas);
+
+      ctx.putImageData(imageData, 0, 0);
+      video.style.display = 'none';
+      document.body.style.background = `url(${canvas.toDataURL()})`;
+      requestAnimationFrame(applyChromaKey);
     }
 
-    modelViewer.addEventListener("load", async () => {
-      const material = modelViewer.model.materials[0];
-
-      // Fix: Use Three.js to create a dynamic texture from canvas
-      const videoTexture = new THREE.CanvasTexture(canvas);
-      videoTexture.needsUpdate = true;
-
-      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
+    video.addEventListener('loadeddata', () => {
+      applyChromaKey();
     });
   </script>
-
-  <script src="script.js"></script>
-
 </body>
 </html>
