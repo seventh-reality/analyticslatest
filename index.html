@@ -2,27 +2,26 @@
 <html lang="en">
 
 <head>
-  <title>&lt;model-viewer&gt; template</title>
+  <title>&lt;model-viewer&gt; with Chroma Key</title>
   <meta charset="utf-8">
-  <meta name="description" content="&lt;model-viewer&gt; template">
+  <meta name="description" content="&lt;model-viewer&gt; with Chroma Key">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link type="text/css" href="./styles.css" rel="stylesheet" />
 
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap-shim">
-{
-  "imports": {
-    "three": "./model-viewer-301.min.js"
+  {
+    "imports": {
+      "three": "./model-viewer-301.min.js"
+    }
   }
-}
-</script>
+  </script>
 
   <script type="module-shim" src="model-viewer-301.min.js"></script>
 </head>
 
 <body>
-  <!-- <model-viewer> HTML element -->
   <model-viewer id="animated" src="all.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls
     poster="poster.webp" shadow-intensity="1" camera-target="0m 0m 0m">
     <div class="progress-bar hide" slot="progress-bar">
@@ -35,32 +34,52 @@
       <img src="ar_hand_prompt.png">
     </div>
   </model-viewer>
+
   <script type="module">
-    const modelViewerAnimated = document.querySelector("model-viewer#animated");
-
+    const modelViewer = document.querySelector("model-viewer#animated");
     let videoTexture = null;
+    let videoElement = document.createElement("video");
+    videoElement.src = "./Video.mp4";
+    videoElement.loop = true;
+    videoElement.muted = true;
+    videoElement.autoplay = true;
+    videoElement.crossOrigin = "anonymous";
 
-
-    customElements.whenDefined('model-viewer').then(() => {
-      videoTexture = modelViewerAnimated.createVideoTexture("./Video.mp4");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    videoElement.addEventListener("loadeddata", () => {
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      processChromaKey();
     });
 
+    function processChromaKey() {
+      requestAnimationFrame(processChromaKey);
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let l = frame.data.length;
+      for (let i = 0; i < l; i += 4) {
+        let r = frame.data[i];
+        let g = frame.data[i + 1];
+        let b = frame.data[i + 2];
+        if (g > 100 && r < 100 && b < 100) {  // Detect green pixels
+          frame.data[i + 3] = 0; // Make transparent
+        }
+      }
+      ctx.putImageData(frame, 0, 0);
+    }
 
+    customElements.whenDefined("model-viewer").then(() => {
+      videoTexture = modelViewer.createVideoTexture(canvas.toDataURL());
+    });
 
-    modelViewerAnimated.addEventListener("load", async () => {
-
-      const material = modelViewerAnimated.model.materials[0];
-      const {baseColorTexture} = material.pbrMetallicRoughness;
-      console.log(modelViewerAnimated.model.materials)
-
-
+    modelViewer.addEventListener("load", async () => {
+      const material = modelViewer.model.materials[0];
+      const { baseColorTexture } = material.pbrMetallicRoughness;
       baseColorTexture.setTexture(videoTexture);
-
     });
-
   </script>
   <script src="script.js"></script>
-
 </body>
 
 </html>
