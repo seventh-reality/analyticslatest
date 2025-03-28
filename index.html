@@ -13,7 +13,7 @@
   <script type="importmap-shim">
   {
     "imports": {
-      "three": "./model-viewer-301.min.js"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.min.js"
     }
   }
   </script>
@@ -36,14 +36,17 @@
   </model-viewer>
 
   <script type="module">
+    import * as THREE from "three";
+
     const modelViewer = document.querySelector("model-viewer#animated");
 
     let video = document.createElement("video");
     video.src = "./Tiger.mp4";
     video.loop = true;
-    video.muted = true;
+    video.muted = true; // Required for autoplay in some browsers
     video.autoplay = true;
     video.crossOrigin = "anonymous";
+    video.playsInline = true; // Important for iOS
     video.play();
 
     const canvas = document.createElement("canvas");
@@ -77,7 +80,10 @@
     modelViewer.addEventListener("load", async () => {
       const material = modelViewer.model.materials[0];
 
-      const videoTexture = new modelViewer.constructor.WebGLVideoTexture(video);
+      // Fix: Use Three.js to create a dynamic texture from canvas
+      const videoTexture = new THREE.CanvasTexture(canvas);
+      videoTexture.needsUpdate = true;
+
       material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
     });
   </script>
