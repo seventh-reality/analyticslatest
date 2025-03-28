@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Legacy iOS Compatible USDZ AR</title>
+  <title>Fixed USDZ AR Viewer</title>
   <script src="https://unpkg.com/@google/model-viewer@2.1.1/dist/model-viewer.min.js"></script>
   <script src="https://unpkg.com/@google/model-viewer@2.1.1/dist/model-viewer-legacy.js"></script>
   <style>
@@ -141,6 +141,7 @@
       alt="3D Model"
       ios-src="all.usdz"
       xr-environment
+      quick-look-browsers="safari chrome"
     >
       <button id="ar-button" slot="ar-button">
         View in AR
@@ -170,7 +171,7 @@
       
       // Configuration
       const config = {
-        minIOSVersion: 12.0,
+        minIOSVersion: 11.0,
         minAndroidVersion: 8.0,
         testMode: false
       };
@@ -200,20 +201,16 @@
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
         
         // iOS detection
-        if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+        if (/iPad|iPhone|iPod/.test(userAgent) {
           isIOS = true;
           const match = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
-          if (match && match[1]) {
-            osVersion = parseFloat(match[1] + '.' + (match[2] || '0'));
-          }
+          osVersion = match ? parseFloat(match[1] + '.' + (match[2] || '0')) : 0;
         }
         // Android detection
         else if (/android/i.test(userAgent)) {
           isAndroid = true;
           const match = userAgent.match(/Android\s([0-9\.]+)/);
-          if (match && match[1]) {
-            osVersion = parseFloat(match[1]);
-          }
+          osVersion = match ? parseFloat(match[1]) : 0;
         }
         
         if (config.testMode) {
@@ -231,13 +228,11 @@
             // Check for Quick Look support
             const a = document.createElement('a');
             if (a.relList && a.relList.supports && a.relList.supports('ar')) {
-              arSupported = true;
               return resolve(true);
             }
             
             // Fallback check for older iOS
             if (osVersion >= 11.0) {
-              arSupported = true;
               return resolve(true);
             }
           }
@@ -248,34 +243,25 @@
             
             // Check for WebXR or Scene Viewer
             if (modelViewer.canActivateAR) {
-              arSupported = true;
               return resolve(true);
             }
             
             // Check for Scene Viewer intent
-            const sceneViewerIntent = 'https://arvr.google.com/scene-viewer/1.0';
             const link = document.createElement('a');
-            link.href = sceneViewerIntent;
+            link.href = 'https://arvr.google.com/scene-viewer/1.0';
             if (link.protocol === 'intent:') {
-              arSupported = true;
               return resolve(true);
             }
           }
           
           // WebXR fallback
           if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-ar').then(supported => {
-              arSupported = supported;
-              resolve(supported);
-            }).catch(() => {
-              arSupported = false;
-              resolve(false);
-            });
-            return;
+            return navigator.xr.isSessionSupported('immersive-ar')
+              .then(supported => resolve(supported))
+              .catch(() => resolve(false));
           }
           
           // No AR support detected
-          arSupported = false;
           resolve(false);
         });
       }
@@ -305,16 +291,11 @@
         if (isIOS && osVersion < 13.0) {
           statusDiv.textContent = "iOS " + osVersion + " - Using Quick Look";
           
-          // Older iOS needs direct USDZ link
-          const modelViewerButton = modelViewer.querySelector('button[slot="ar-button"]');
-          if (modelViewerButton) {
-            modelViewerButton.style.display = 'none';
-          }
+          // Ensure the USDZ file is accessible
+          modelViewer.setAttribute('ios-src', 'all.usdz');
           
-          arButton.onclick = function() {
-            window.location.href = "your-model.usdz";
-            return false;
-          };
+          // Force Quick Look mode
+          modelViewer.setAttribute('ar-modes', 'quick-look');
         }
       }
       
@@ -323,22 +304,45 @@
         statusDiv.textContent = "Launching AR...";
         videoBg.pause();
         
-        // Try to activate AR
-        if (modelViewer.activateAR) {
-          modelViewer.activateAR().then(() => {
-            statusDiv.textContent = "AR session started";
-          }).catch(error => {
+        // For iOS devices
+        if (isIOS) {
+          // Ensure the USDZ file is properly referenced
+          const usdzUrl = new URL('all.usdz', window.location.href).href;
+          modelViewer.setAttribute('ios-src', usdzUrl);
+          
+          // Add timeout in case AR fails to launch
+          const timeout = setTimeout(() => {
+            statusDiv.textContent = "AR launch timed out - trying alternative method";
+            videoBg.play();
+            
+            // Fallback to direct USDZ link for older iOS
+            if (osVersion < 13.0) {
+              window.location.href = usdzUrl;
+            }
+          }, 3000);
+          
+          // Clear timeout if AR launches successfully
+          modelViewer.addEventListener('ar-status', function handler(event) {
+            if (event.detail.status === 'session-started') {
+              clearTimeout(timeout);
+              modelViewer.removeEventListener('ar-status', handler);
+            }
+          });
+          
+          // Trigger AR
+          modelViewer.activateAR();
+        }
+        // For Android devices
+        else if (isAndroid) {
+          modelViewer.activateAR().catch(error => {
             statusDiv.textContent = "AR error: " + error.message;
             videoBg.play();
             
-            // Fallback for some Android devices
-            if (isAndroid) {
-              setTimeout(() => {
-                window.open('intent://arvr.google.com/scene-viewer/1.0?file=' + 
-                  encodeURIComponent(window.location.origin + '/your-model.usdz') + 
-                  '#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;');
-              }, 500);
-            }
+            // Fallback to Scene Viewer
+            setTimeout(() => {
+              const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(window.location.origin + '/all.glb')}#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
+              window.location.href = sceneViewerUrl;
+            }, 500);
           });
         }
       }
@@ -356,7 +360,7 @@
       }
       
       // Start the application
-      init();
+      document.addEventListener('DOMContentLoaded', init);
     })();
   </script>
 </body>
