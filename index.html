@@ -37,49 +37,52 @@
 
   <script type="module">
     const modelViewer = document.querySelector("model-viewer#animated");
-    let videoTexture = null;
-    let videoElement = document.createElement("video");
-    videoElement.src = "./Tiger.mp4";
-    videoElement.loop = true;
-    videoElement.muted = true;
-    videoElement.autoplay = true;
-    videoElement.crossOrigin = "anonymous";
+
+    let video = document.createElement("video");
+    video.src = "./Tiger.mp4";
+    video.loop = true;
+    video.muted = true;
+    video.autoplay = true;
+    video.crossOrigin = "anonymous";
+    video.play();
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    videoElement.addEventListener("loadeddata", () => {
-      canvas.width = videoElement.videoWidth;
-      canvas.height = videoElement.videoHeight;
-      processChromaKey();
+
+    video.addEventListener("loadeddata", () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      requestAnimationFrame(updateCanvas);
     });
 
-    function processChromaKey() {
-      requestAnimationFrame(processChromaKey);
-      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    function updateCanvas() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
       let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let l = frame.data.length;
-      for (let i = 0; i < l; i += 4) {
+      let len = frame.data.length;
+
+      for (let i = 0; i < len; i += 4) {
         let r = frame.data[i];
         let g = frame.data[i + 1];
         let b = frame.data[i + 2];
-        if (g > 100 && r < 100 && b < 100) {  // Detect green pixels
-          frame.data[i + 3] = 0; // Make transparent
+
+        if (g > 100 && r < 100 && b < 100) {
+          frame.data[i + 3] = 0; // Make green pixels transparent
         }
       }
       ctx.putImageData(frame, 0, 0);
+      requestAnimationFrame(updateCanvas);
     }
-
-    customElements.whenDefined("model-viewer").then(() => {
-      videoTexture = modelViewer.createVideoTexture(canvas.toDataURL());
-    });
 
     modelViewer.addEventListener("load", async () => {
       const material = modelViewer.model.materials[0];
-      const { baseColorTexture } = material.pbrMetallicRoughness;
-      baseColorTexture.setTexture(videoTexture);
+
+      const videoTexture = new modelViewer.constructor.WebGLVideoTexture(video);
+      material.pbrMetallicRoughness.baseColorTexture.setTexture(videoTexture);
     });
   </script>
-  <script src="script.js"></script>
-</body>
 
+  <script src="script.js"></script>
+
+</body>
 </html>
