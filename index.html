@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fixed USDZ AR Viewer</title>
+  <title>Reliable USDZ AR Viewer</title>
   <script src="https://unpkg.com/@google/model-viewer@2.1.1/dist/model-viewer.min.js"></script>
   <script src="https://unpkg.com/@google/model-viewer@2.1.1/dist/model-viewer-legacy.js"></script>
   <style>
@@ -49,7 +49,7 @@
     
     #ar-button-container {
       position: fixed;
-      bottom: 20px;
+      bottom: calc(20px + env(safe-area-inset-bottom));
       left: 0;
       width: 100%;
       display: flex;
@@ -71,7 +71,7 @@
       -webkit-tap-highlight-color: transparent;
       min-width: 160px;
       text-align: center;
-      transform: translateZ(0); /* Fix for Safari rendering */
+      transform: translateZ(0);
     }
     
     #status {
@@ -105,56 +105,14 @@
       padding: 20px;
       text-align: center;
     }
-    
-    #unsupported h2 {
-      margin-bottom: 15px;
-      font-size: 20px;
-    }
-    
-    #unsupported p {
-      margin-bottom: 12px;
-      font-size: 15px;
-      max-width: 80%;
-    }
-    
-    .lds-dual-ring {
-      display: inline-block;
-      width: 40px;
-      height: 40px;
-      margin-bottom: 15px;
-    }
-    .lds-dual-ring:after {
-      content: " ";
-      display: block;
-      width: 32px;
-      height: 32px;
-      margin: 4px;
-      border-radius: 50%;
-      border: 3px solid #fff;
-      border-color: #fff transparent #fff transparent;
-      animation: lds-dual-ring 1.2s linear infinite;
-    }
-    @keyframes lds-dual-ring {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* Safe area adjustments for notch devices */
-    @supports (padding-bottom: env(safe-area-inset-bottom)) {
-      #ar-button-container {
-        bottom: calc(20px + env(safe-area-inset-bottom));
-      }
-    }
   </style>
 </head>
 <body>
   <div id="container">
-    <!-- Video Background -->
     <video id="video-bg" autoplay loop muted playsinline webkit-playsinline>
       <source src="Tiger.mp4" type="video/mp4">
     </video>
     
-    <!-- Model Viewer with legacy support -->
     <model-viewer
       id="model-viewer"
       src="all.glb"
@@ -171,25 +129,20 @@
       quick-look-browsers="safari chrome"
     ></model-viewer>
     
-    <!-- AR Button Container -->
     <div id="ar-button-container">
       <button id="ar-button">View in AR</button>
     </div>
     
-    <!-- Status Message -->
     <div id="status">Initializing AR...</div>
     
-    <!-- Unsupported Message with loading spinner -->
     <div id="unsupported">
-      <div class="lds-dual-ring"></div>
-      <h2>Loading AR Experience</h2>
-      <p id="unsupported-message">Checking your device capabilities...</p>
+      <h2>AR Not Available</h2>
+      <p id="unsupported-message">Your device doesn't support AR features</p>
     </div>
   </div>
 
   <script>
     (function() {
-      // DOM elements
       const modelViewer = document.getElementById('model-viewer');
       const arButton = document.getElementById('ar-button');
       const statusDiv = document.getElementById('status');
@@ -201,14 +154,14 @@
       const config = {
         minIOSVersion: 11.0,
         minAndroidVersion: 8.0,
-        testMode: false
+        arLaunchTimeout: 5000 // 5 seconds timeout
       };
       
       // State
-      let arSupported = false;
       let isIOS = false;
       let isAndroid = false;
       let osVersion = 0;
+      let arSessionActive = false;
       
       // Initialize
       function init() {
@@ -224,62 +177,39 @@
         });
       }
       
-      // Detect platform and version
+      // Detect platform
       function detectPlatform() {
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
         
-        // iOS detection
         if (/iPad|iPhone|iPod/.test(userAgent)) {
           isIOS = true;
           const match = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
           osVersion = match ? parseFloat(match[1] + '.' + (match[2] || '0')) : 0;
-        }
-        // Android detection
-        else if (/android/i.test(userAgent)) {
+        } else if (/android/i.test(userAgent)) {
           isAndroid = true;
           const match = userAgent.match(/Android\s([0-9\.]+)/);
           osVersion = match ? parseFloat(match[1]) : 0;
         }
-        
-        if (config.testMode) {
-          console.log(`Detected: ${isIOS ? 'iOS' : isAndroid ? 'Android' : 'Other'}, Version: ${osVersion}`);
-        }
       }
       
-      // Check AR support with platform-specific checks
+      // Check AR support
       function checkARSupport() {
         return new Promise((resolve) => {
-          // iOS Quick Look (works on older iOS)
+          // iOS Quick Look
           if (isIOS && osVersion >= config.minIOSVersion) {
-            statusDiv.textContent = "iOS device detected";
-            
-            // Check for Quick Look support
             const a = document.createElement('a');
-            if (a.relList && a.relList.supports && a.relList.supports('ar')) {
-              return resolve(true);
-            }
-            
-            // Fallback check for older iOS
-            if (osVersion >= 11.0) {
+            if ((a.relList && a.relList.supports && a.relList.supports('ar')) || osVersion >= 11.0) {
               return resolve(true);
             }
           }
           
           // Android Scene Viewer/WebXR
           if (isAndroid && osVersion >= config.minAndroidVersion) {
-            statusDiv.textContent = "Android device detected";
+            if (modelViewer.canActivateAR) return resolve(true);
             
-            // Check for WebXR or Scene Viewer
-            if (modelViewer.canActivateAR) {
-              return resolve(true);
-            }
-            
-            // Check for Scene Viewer intent
             const link = document.createElement('a');
             link.href = 'https://arvr.google.com/scene-viewer/1.0';
-            if (link.protocol === 'intent:') {
-              return resolve(true);
-            }
+            if (link.protocol === 'intent:') return resolve(true);
           }
           
           // WebXR fallback
@@ -289,7 +219,6 @@
               .catch(() => resolve(false));
           }
           
-          // No AR support detected
           resolve(false);
         });
       }
@@ -299,78 +228,77 @@
         unsupportedDiv.style.display = 'none';
         statusDiv.textContent = "AR ready - tap View in AR";
         
-        // Handle AR button click
-        arButton.addEventListener('click', function() {
-          launchAR();
-        });
-        
-        // Handle AR session events
-        modelViewer.addEventListener('ar-status', function(event) {
-          if (event.detail.status === 'session-started') {
-            videoBg.pause();
-            statusDiv.textContent = "AR session started";
-          } else if (event.detail.status === 'not-presenting') {
-            videoBg.play();
-            statusDiv.textContent = "AR session ended";
-          }
-        });
+        arButton.addEventListener('click', launchAR);
+        modelViewer.addEventListener('ar-status', handleARStatus);
       }
       
       // Launch AR experience
       function launchAR() {
-        statusDiv.textContent = "Launching AR...";
-        videoBg.pause();
-        arButton.disabled = true;
+        if (arSessionActive) return;
         
-        // For iOS devices
+        statusDiv.textContent = "Launching AR...";
+        arButton.disabled = true;
+        videoBg.pause();
+        
+        // Absolute URL for USDZ file
+        const usdzUrl = new URL('all.usdz', window.location.href).href;
+        modelViewer.setAttribute('ios-src', usdzUrl);
+        
+        // Timeout for AR launch
+        const timeout = setTimeout(() => {
+          if (!arSessionActive) {
+            handleARLaunchTimeout();
+          }
+        }, config.arLaunchTimeout);
+        
+        // Launch AR
+        modelViewer.activateAR().catch(error => {
+          clearTimeout(timeout);
+          handleARError(error);
+        });
+      }
+      
+      // Handle AR status changes
+      function handleARStatus(event) {
+        if (event.detail.status === 'session-started') {
+          arSessionActive = true;
+          statusDiv.textContent = "AR session started";
+        } else if (event.detail.status === 'not-presenting') {
+          arSessionActive = false;
+          videoBg.play();
+          arButton.disabled = false;
+          statusDiv.textContent = "AR session ended";
+        }
+      }
+      
+      // Handle AR launch timeout
+      function handleARLaunchTimeout() {
+        statusDiv.textContent = "AR launch taking longer than expected...";
+        
+        // iOS fallback to direct USDZ link
         if (isIOS) {
-          // Ensure the USDZ file is properly referenced
           const usdzUrl = new URL('all.usdz', window.location.href).href;
-          modelViewer.setAttribute('ios-src', usdzUrl);
-          
-          // Add timeout in case AR fails to launch
-          const timeout = setTimeout(() => {
-            statusDiv.textContent = "AR launch timed out - trying alternative method";
-            videoBg.play();
-            arButton.disabled = false;
-            
-            // Fallback to direct USDZ link for older iOS
-            if (osVersion < 13.0) {
-              window.location.href = usdzUrl;
-            }
-          }, 3000);
-          
-          // Clear timeout if AR launches successfully
-          const statusHandler = function(event) {
-            if (event.detail.status === 'session-started') {
-              clearTimeout(timeout);
-              modelViewer.removeEventListener('ar-status', statusHandler);
-            }
-          };
-          modelViewer.addEventListener('ar-status', statusHandler);
-          
-          // Trigger AR
-          modelViewer.activateAR().catch(error => {
-            clearTimeout(timeout);
-            statusDiv.textContent = "AR error: " + error.message;
-            videoBg.play();
-            arButton.disabled = false;
-          });
-        }
-        // For Android devices
+          window.location.href = usdzUrl;
+        } 
+        // Android fallback to Scene Viewer
         else if (isAndroid) {
-          modelViewer.activateAR().catch(error => {
-            statusDiv.textContent = "AR error: " + error.message;
-            videoBg.play();
-            arButton.disabled = false;
-            
-            // Fallback to Scene Viewer
-            setTimeout(() => {
-              const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(window.location.origin + '/all.glb')}&mode=ar_only#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
-              window.location.href = sceneViewerUrl;
-            }, 500);
-          });
+          const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(window.location.origin + '/all.glb')}&mode=ar_only#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
+          window.location.href = sceneViewerUrl;
         }
+      }
+      
+      // Handle AR errors
+      function handleARError(error) {
+        statusDiv.textContent = "AR error: " + error.message;
+        videoBg.play();
+        arButton.disabled = false;
+        
+        // Try fallback after short delay
+        setTimeout(() => {
+          if (!arSessionActive) {
+            handleARLaunchTimeout();
+          }
+        }, 1000);
       }
       
       // Show unsupported message
@@ -379,13 +307,9 @@
         unsupportedMessage.textContent = message;
         document.getElementById('ar-button-container').style.display = 'none';
         statusDiv.textContent = message;
-        
-        if (config.testMode) {
-          console.log("Unsupported: " + message);
-        }
       }
       
-      // Start the application when DOM is fully loaded
+      // Start when DOM is ready
       if (document.readyState === 'complete' || document.readyState === 'interactive') {
         setTimeout(init, 1);
       } else {
