@@ -15,12 +15,17 @@
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
+      height: 100vh;
+      width: 100vw;
     }
     
     #container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
     
     #video-bg {
@@ -37,13 +42,24 @@
       width: 100%;
       height: 100%;
       --poster-color: transparent;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    
+    #ar-button-container {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      z-index: 10;
+      padding: 0 20px;
+      box-sizing: border-box;
     }
     
     #ar-button {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
       background: linear-gradient(to bottom, #52A7F9, #2E6EE1);
       color: white;
       padding: 12px 24px;
@@ -51,22 +67,26 @@
       border: none;
       font-size: 16px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      z-index: 10;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
+      min-width: 160px;
+      text-align: center;
+      transform: translateZ(0); /* Fix for Safari rendering */
     }
     
     #status {
-      position: absolute;
-      top: 20px;
+      position: fixed;
+      top: env(safe-area-inset-top, 20px);
       left: 20px;
+      right: 20px;
       background: rgba(0,0,0,0.7);
       color: white;
       padding: 8px 12px;
       border-radius: 5px;
       font-size: 13px;
       z-index: 10;
-      max-width: 80%;
+      max-width: calc(100% - 40px);
+      word-break: break-word;
     }
     
     #unsupported {
@@ -118,6 +138,13 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    
+    /* Safe area adjustments for notch devices */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      #ar-button-container {
+        bottom: calc(20px + env(safe-area-inset-bottom));
+      }
+    }
   </style>
 </head>
 <body>
@@ -142,14 +169,15 @@
       ios-src="all.usdz"
       xr-environment
       quick-look-browsers="safari chrome"
-    >
-      <button id="ar-button" slot="ar-button">
-        View in AR
-      </button>
-    </model-viewer>
+    ></model-viewer>
+    
+    <!-- AR Button Container -->
+    <div id="ar-button-container">
+      <button id="ar-button">View in AR</button>
+    </div>
     
     <!-- Status Message -->
-    <div id="status">Initializing...</div>
+    <div id="status">Initializing AR...</div>
     
     <!-- Unsupported Message with loading spinner -->
     <div id="unsupported">
@@ -201,7 +229,7 @@
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
         
         // iOS detection
-        if (/iPad|iPhone|iPod/.test(userAgent) {
+        if (/iPad|iPhone|iPod/.test(userAgent)) {
           isIOS = true;
           const match = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
           osVersion = match ? parseFloat(match[1] + '.' + (match[2] || '0')) : 0;
@@ -286,23 +314,13 @@
             statusDiv.textContent = "AR session ended";
           }
         });
-        
-        // Special handling for older iOS
-        if (isIOS && osVersion < 13.0) {
-          statusDiv.textContent = "iOS " + osVersion + " - Using Quick Look";
-          
-          // Ensure the USDZ file is accessible
-          modelViewer.setAttribute('ios-src', 'all.usdz');
-          
-          // Force Quick Look mode
-          modelViewer.setAttribute('ar-modes', 'quick-look');
-        }
       }
       
       // Launch AR experience
       function launchAR() {
         statusDiv.textContent = "Launching AR...";
         videoBg.pause();
+        arButton.disabled = true;
         
         // For iOS devices
         if (isIOS) {
@@ -314,6 +332,7 @@
           const timeout = setTimeout(() => {
             statusDiv.textContent = "AR launch timed out - trying alternative method";
             videoBg.play();
+            arButton.disabled = false;
             
             // Fallback to direct USDZ link for older iOS
             if (osVersion < 13.0) {
@@ -322,25 +341,32 @@
           }, 3000);
           
           // Clear timeout if AR launches successfully
-          modelViewer.addEventListener('ar-status', function handler(event) {
+          const statusHandler = function(event) {
             if (event.detail.status === 'session-started') {
               clearTimeout(timeout);
-              modelViewer.removeEventListener('ar-status', handler);
+              modelViewer.removeEventListener('ar-status', statusHandler);
             }
-          });
+          };
+          modelViewer.addEventListener('ar-status', statusHandler);
           
           // Trigger AR
-          modelViewer.activateAR();
+          modelViewer.activateAR().catch(error => {
+            clearTimeout(timeout);
+            statusDiv.textContent = "AR error: " + error.message;
+            videoBg.play();
+            arButton.disabled = false;
+          });
         }
         // For Android devices
         else if (isAndroid) {
           modelViewer.activateAR().catch(error => {
             statusDiv.textContent = "AR error: " + error.message;
             videoBg.play();
+            arButton.disabled = false;
             
             // Fallback to Scene Viewer
             setTimeout(() => {
-              const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(window.location.origin + '/all.glb')}#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
+              const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(window.location.origin + '/all.glb')}&mode=ar_only#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;end;`;
               window.location.href = sceneViewerUrl;
             }, 500);
           });
@@ -351,7 +377,7 @@
       function showUnsupported(message) {
         unsupportedDiv.style.display = 'flex';
         unsupportedMessage.textContent = message;
-        arButton.style.display = 'none';
+        document.getElementById('ar-button-container').style.display = 'none';
         statusDiv.textContent = message;
         
         if (config.testMode) {
@@ -359,8 +385,12 @@
         }
       }
       
-      // Start the application
-      document.addEventListener('DOMContentLoaded', init);
+      // Start the application when DOM is fully loaded
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(init, 1);
+      } else {
+        document.addEventListener('DOMContentLoaded', init);
+      }
     })();
   </script>
 </body>
